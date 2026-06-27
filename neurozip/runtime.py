@@ -21,24 +21,53 @@ _PKG = Path(__file__).resolve().parent
 # Trained model bundle (projector + v4 codecs + scores + norm stats + demo samples).
 MODELS_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
               "v0.2.0-beta.1/neurozip-models-v4.tar.gz")
+# Source tarball used to self-bootstrap the ML environment (must match this version).
+SOURCE_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
+              "v0.2.0-beta.3/neurozip-0.2.0-beta.3.tar.gz")
+
+
+def _progress(label):
+    import sys
+    state = {"last": -1}
+
+    def hook(blocks, bs, total):
+        done = blocks * bs
+        if total > 0:
+            pct = min(100, int(done * 100 / total))
+            if pct != state["last"]:
+                state["last"] = pct
+                bar = "#" * (pct // 4) + "-" * (25 - pct // 4)
+                sys.stdout.write(f"\r[neurozip] {label} [{bar}] {pct:3d}% "
+                                 f"({done // 1048576}/{total // 1048576} MB)")
+                sys.stdout.flush()
+    return hook
 
 
 def download_models(url: str | None = None, dest: str | None = None) -> Path:
     """Fetch and extract the model bundle into <dest>/checkpoints (default ~/.neurozip)."""
+    import sys
     import tarfile
     import tempfile
     import urllib.request
     url = url or MODELS_URL
     home = Path(dest) if dest else (Path.home() / ".neurozip")
     home.mkdir(parents=True, exist_ok=True)
-    print(f"[neurozip] downloading models from {url}")
     with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
-        urllib.request.urlretrieve(url, tmp.name)
+        urllib.request.urlretrieve(url, tmp.name, reporthook=_progress("downloading models"))
+        sys.stdout.write("\n")
         with tarfile.open(tmp.name, "r:gz") as tf:
             tf.extractall(home)
     ck = home / "checkpoints"
     print(f"[neurozip] models ready at {ck}")
     return ck
+
+
+def ensure_models(ckpt: Path | None = None) -> Path:
+    """Return the checkpoints dir, downloading the bundle on first use if absent."""
+    ckpt = ckpt or checkpoints_dir()
+    if (ckpt / "clip_proj.pt").exists():
+        return ckpt
+    return download_models()
 
 
 def checkpoints_dir() -> Path:

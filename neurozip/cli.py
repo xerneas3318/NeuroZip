@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     dl.add_argument("--url", help="Override the model bundle URL.")
     dl.add_argument("--dest", help="Install dir (default ~/.neurozip).")
 
-    for name in ("serve", "ui"):
+    for name in ("serve", "ui", "server"):
         sv = _add(sub, name, "Launch the local upload UI (real compression).")
         sv.add_argument("--port", type=int, default=7878)
         sv.add_argument("--host", default="127.0.0.1")
@@ -173,15 +173,26 @@ def _cmd_serve(args) -> int:
     return server.run(host=args.host, port=args.port, open_browser=not args.no_browser)
 
 
+ML_COMMANDS = {"compress", "decompress", "embed", "sample", "serve", "ui", "server"}
+
+
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if not args.command:
         build_parser().print_help()
         return 0
+    # Auto-setup: build the ML env and re-exec into it on first inference use,
+    # then make sure the trained models are present (both show a status).
+    from . import bootstrap
+    bootstrap.reexec_if_needed(args.command, ML_COMMANDS)
+    if args.command in ML_COMMANDS:
+        from . import runtime as rt
+        rt.ensure_models()
     dispatch = {
         "compress": _cmd_compress, "decompress": _cmd_decompress,
         "embed": _cmd_embed, "sample": _cmd_sample, "info": _cmd_info,
         "download": _cmd_download, "serve": _cmd_serve, "ui": _cmd_serve,
+        "server": _cmd_serve,
     }
     return dispatch[args.command](args)
 

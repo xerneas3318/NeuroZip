@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Data (~3 GB; users re-download via scripts/download_data.sh)
+data/
+
+# Logs
+logs/*.log
+logs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+
+# Local-only
+/tmp/
+*.tmp

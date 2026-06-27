@@ -357,6 +357,12 @@ def index():
     return send_file(ROOT / "demo.html")
 
 
+@app.get("/clean")
+def index_clean():
+    """White-theme alternative to demo.html — same API, different shell."""
+    return send_file(ROOT / "demo_clean.html")
+
+
 @app.get("/demo/<path:p>")
 def demo_assets(p):
     return send_from_directory(DEMO_DIR, p)

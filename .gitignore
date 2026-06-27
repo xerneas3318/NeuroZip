@@ -1,0 +1,34 @@
+# ---- NeuroZip private notes (do NOT commit) ----
+instructions.md
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# ---- ML artifacts / data ----
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+checkpoints/
+runs/
+wandb/
+data/
+datasets/
+demo_assets/
+*.log
+
+# ---- OS / editor ----
+.DS_Store
+.idea/
+.vscode/
+*.swp

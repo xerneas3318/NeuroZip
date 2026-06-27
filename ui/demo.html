@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NeuroZip — demo</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#141a24; --ink:#e6edf3; --muted:#8b97a7; --ours:#3fb950; --base:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:24px 28px 8px; }
+  h1 { margin:0; font-size:22px; letter-spacing:.2px; }
+  .tag { color:var(--muted); font-size:13px; }
+  .controls { display:flex; gap:18px; align-items:center; flex-wrap:wrap; padding:16px 28px; }
+  input[type=text]{ background:var(--panel); border:1px solid #283142; color:var(--ink); padding:9px 12px; border-radius:8px; min-width:220px; }
+  .ratio { display:flex; gap:10px; align-items:center; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:8px 28px 28px; }
+  .panel { background:var(--panel); border:1px solid #232c3a; border-radius:12px; padding:14px; }
+  .panel h2 { margin:0 0 4px; font-size:14px; }
+  .ours h2 { color:var(--ours); } .base h2 { color:var(--base); }
+  .thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:10px; }
+  .thumb { aspect-ratio:1; background:#0c1119; border:1px dashed #2a3340; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#3a4658; font-size:11px; }
+  .readout { padding:0 28px 24px; color:var(--muted); }
+  .readout b.ours { color:var(--ours); } .readout b.base { color:var(--base); }
+  .note { padding:0 28px 28px; color:#5b6677; font-size:12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>NeuroZip</h1>
+    <div class="tag">Type a concept; retrieve the EEG epochs recorded while a subject saw it — after compression.</div>
+  </header>
+
+  <div class="controls">
+    <input id="q" type="text" placeholder="e.g. accordion" />
+    <div class="ratio">
+      <span>compression</span>
+      <input id="ratio" type="range" min="1" max="200" value="50" />
+      <span id="ratioval">50×</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel ours">
+      <h2>NeuroZip (task-aware)</h2>
+      <div class="thumbs" id="ours"></div>
+    </div>
+    <div class="panel base">
+      <h2>Fidelity-only codec</h2>
+      <div class="thumbs" id="base"></div>
+    </div>
+  </div>
+
+  <div class="readout" id="readout">
+    retrieval accuracy retained: <b class="ours">— %</b> (ours) vs <b class="base">— %</b> (fidelity) at <span id="r2">50</span>× compression
+  </div>
+
+  <div class="note">
+    Placeholder shell. Stage 5 loads <code>precomputed</code> assets from Stage 4 (JSON + paired
+    stimulus PNGs) and swaps them on query/slider change — no live model inference in the browser.
+  </div>
+
+<script>
+  // Placeholder wiring only. Real version reads demo_assets/*.json produced by evaluate.py.
+  const ratio = document.getElementById('ratio');
+  const sync = () => {
+    document.getElementById('ratioval').textContent = ratio.value + '×';
+    document.getElementById('r2').textContent = ratio.value;
+  };
+  ratio.addEventListener('input', sync); sync();
+  for (const id of ['ours','base']) {
+    const host = document.getElementById(id);
+    for (let i = 0; i < 5; i++) {
+      const d = document.createElement('div'); d.className = 'thumb'; d.textContent = 'epoch'; host.appendChild(d);
+    }
+  }
+</script>
+</body>
+</html>

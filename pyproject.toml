@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurozip"
+version = "0.0.1"
+description = "Task-aware neural compression for brain/biomedical signals."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "xerneas3318" }]
+keywords = ["compression", "eeg", "neural-codec", "clip", "retrieval"]
+dependencies = [
+    "numpy",
+    "torch",
+    "datasets",
+    "open_clip_torch",
+    "pillow",
+]
+
+[project.optional-dependencies]
+dev = ["matplotlib", "tqdm"]
+
+[project.scripts]
+neurozip = "neurozip.cli:main"
+
+[tool.setuptools]
+packages = ["neurozip"]

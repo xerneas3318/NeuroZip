@@ -1,0 +1,7 @@
+numpy
+torch
+datasets
+open_clip_torch
+pillow
+matplotlib
+tqdm

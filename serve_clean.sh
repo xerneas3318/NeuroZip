@@ -17,6 +17,6 @@ fi
 
 echo "==============================================="
 echo "  NeuroZip — clean (white-theme) interface"
-echo "  http://${HOST}:${PORT}/clean"
+echo "  http://${HOST}:${PORT}/"
 echo "==============================================="
-exec $PY serve.py --host "$HOST" --port "$PORT"
+NEUROZIP_HOME=clean exec $PY serve.py --host "$HOST" --port "$PORT"

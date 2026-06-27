@@ -19,7 +19,7 @@ precomputed features.
 """
 
 from __future__ import annotations
-import argparse, base64, io, json, time
+import argparse, base64, io, json, os, time
 from functools import lru_cache
 from pathlib import Path
 import numpy as np
@@ -352,15 +352,27 @@ def _ensure_state():
     load_state()
 
 
+def _root_html() -> str:
+    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean."""
+    home = os.environ.get("NEUROZIP_HOME", "dark").lower()
+    return "demo_clean.html" if home == "clean" else "demo.html"
+
+
 @app.get("/")
 def index():
-    return send_file(ROOT / "demo.html")
+    return send_file(ROOT / _root_html())
 
 
 @app.get("/clean")
 def index_clean():
     """White-theme alternative to demo.html — same API, different shell."""
     return send_file(ROOT / "demo_clean.html")
+
+
+@app.get("/dark")
+def index_dark():
+    """Dark-theme alternative."""
+    return send_file(ROOT / "demo.html")
 
 
 @app.get("/demo/<path:p>")

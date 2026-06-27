@@ -3,8 +3,8 @@ class Neurozip < Formula
 
   desc "Task-aware neural compression for brain/biomedical signals"
   homepage "https://github.com/xerneas3318/NeuroZip"
-  url "https://github.com/xerneas3318/NeuroZip/releases/download/v0.2.0-beta.2/neurozip-0.2.0-beta.2.tar.gz"
-  sha256 "a25cbac69ab1d6ad65fd7935cc6d94650bfd613246560eb36ee1da1ae4f6fb5f"
+  url "https://github.com/xerneas3318/NeuroZip/releases/download/v0.2.0-beta.3/neurozip-0.2.0-beta.3.tar.gz"
+  sha256 "77da8ebb482b56dedb6127c8217c6cc38840507b1352115ee9193b1f17d61cff"
   license "PolyForm-Noncommercial-1.0.0"
   head "https://github.com/xerneas3318/NeuroZip.git", branch: "model-testing"
 

@@ -14,26 +14,59 @@ keep the ones that do. The result is a signal you can compress hard while it sta
 First target: **EEG** (THINGS-EEG), with a CLIP-based judge so you can type a word and retrieve the
 EEG epochs recorded while a subject looked at that thing — even after aggressive compression.
 
-> Status: early / hackathon scaffold. APIs and modules are stubs under active construction.
+> **Status: v0.1.0-beta.1.** The CLI, the local drag-and-drop UI, and the importable
+> frozen layer all work today. `compress` / `decompress` / `search` currently emit
+> **placeholder (randomized)** results — the real neural codec is under construction.
 
-## Install (dev)
+## Install
 
+**Homebrew** (recommended):
 ```bash
-git clone https://github.com/xerneas3318/NeuroZip
-cd NeuroZip
-pip install -e .
+brew install xerneas3318/tap/neurozip
 ```
 
-Eventually: `brew install xerneas3318/tap/neurozip`.
+**curl**:
+```bash
+curl -fsSL https://raw.githubusercontent.com/xerneas3318/NeuroZip/main/install.sh | bash
+```
 
-## CLI (planned, ffmpeg-style)
+**pip** (from source):
+```bash
+pip install "neurozip @ git+https://github.com/xerneas3318/NeuroZip"
+# with the neural layer / training stack:
+pip install "neurozip[ml] @ git+https://github.com/xerneas3318/NeuroZip"
+```
+
+The core install is **stdlib-only** (fast); PyTorch and friends live behind the `ml` extra.
+
+## CLI (ffmpeg-style)
 
 ```bash
-neurozip compress   path/to/eeg/      -o out.nz   --ratio 50
+neurozip compress   path/to/folder/   -o out.nz   --ratio 50
 neurozip decompress out.nz            -o restored/
 neurozip search     "accordion"       --in out.nz --topk 5
-neurozip ui                                              # drag-and-drop interface
+neurozip serve                                          # local drag-and-drop UI (127.0.0.1:7878)
+neurozip ui                                             # alias for serve
 ```
+
+## Use it as a frozen layer (no embedding to train)
+
+Drop NeuroZip in where you'd otherwise put a trainable embedding. It's a pretrained,
+**frozen** encoder, so you never spend gradients updating it — you train only the rest
+of your model, gradients still flow through:
+
+```python
+import torch
+from neurozip import NeuroZipLayer
+
+embed = NeuroZipLayer.from_pretrained("eeg-clip-b32")   # frozen, requires_grad=False
+x = torch.randn(8, 63, 200)        # (batch, channels, time)
+z = embed(x)                       # (8, 512) semantic embedding — no grad spent here
+logits = my_head(z)                # train only my_head
+```
+
+> Requires `pip install "neurozip[ml]"`. Beta: weights are frozen-random until a
+> checkpoint is published; the API is stable.
 
 ## How it works
 

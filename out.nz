@@ -1,0 +1,11 @@
+{
+  "magic": "NEUROZIP-BETA",
+  "created": "2026-06-27T13:11:43",
+  "source": "/Users/xerneas/data/eeg",
+  "n_items": 1,
+  "original_bytes": 4310920,
+  "compressed_bytes": 85675,
+  "ratio": 50.32,
+  "target_ratio": 50.0,
+  "note": "beta placeholder archive \u2014 no real signal data stored"
+}

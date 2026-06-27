@@ -4,17 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neurozip"
-version = "0.1.0b1"
+version = "0.1.0b2"
 description = "Task-aware neural compression for brain/biomedical signals."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+# Source-available, noncommercial. NOT an OSI "open source" license: selling is forbidden.
+license = { text = "PolyForm-Noncommercial-1.0.0" }
 authors = [{ name = "xerneas3318" }]
 keywords = ["compression", "eeg", "neural-codec", "clip", "retrieval"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
 ]
 # Core install is stdlib-only on purpose: the CLI, the local UI server, and
 # `import neurozip` all work with zero third-party deps, so `brew install` is fast.

@@ -94,4 +94,7 @@ while a fidelity-only codec falls off a cliff.
 
 ## License
 
-TBD.
+[PolyForm Noncommercial License 1.0.0](LICENSE). The source is public and you may use,
+modify, and share it for any **noncommercial** purpose (personal, research, education,
+nonprofit). **Selling it, or any commercial use, is not permitted.** This is a
+source-available license, not an OSI "open source" license (which cannot forbid selling).

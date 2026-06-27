@@ -34,7 +34,9 @@ def train_projector(args):
     train_ds, train_loader = make_loader("train", batch_size=args.batch, num_workers=args.workers)
     test_ds = ThingsEEG(split="test")
 
-    model = EEGProjector(n_channels=N_CHANNELS, hidden=args.hidden, out_dim=CLIP_DIM).to(DEVICE)
+    model = EEGProjector(n_channels=N_CHANNELS, hidden=args.hidden,
+                          out_dim=CLIP_DIM, n_attn=args.n_attn,
+                          attn_heads=args.attn_heads).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs * len(train_loader))
 
@@ -60,7 +62,9 @@ def train_projector(args):
         if acc["top1"] > best:
             best = acc["top1"]
             torch.save({"model": model.state_dict(),
-                        "config": {"hidden": args.hidden, "out_dim": CLIP_DIM}},
+                        "config": {"hidden": args.hidden, "out_dim": CLIP_DIM,
+                                   "n_attn": args.n_attn,
+                                   "attn_heads": args.attn_heads}},
                        PROJ_WEIGHTS)
             print(f"[proj] saved -> {PROJ_WEIGHTS} (top1={best*100:.2f}%)")
 
@@ -247,9 +251,11 @@ class HoldoutClassifier(nn.Module):
     Stage-3 numbers aren't just gaming the projector.
     """
 
-    def __init__(self, n_classes: int, hidden: int = 128):
+    def __init__(self, n_classes: int, hidden: int = 128, n_attn: int = 0,
+                 attn_heads: int = 4):
         super().__init__()
-        self.body = EEGProjector(hidden=hidden, out_dim=hidden * 2)
+        self.body = EEGProjector(hidden=hidden, out_dim=hidden * 2,
+                                  n_attn=n_attn, attn_heads=attn_heads)
         self.cls = nn.Linear(hidden * 2, n_classes)
 
     def forward(self, eeg):
@@ -294,7 +300,8 @@ def train_holdout_classifier(args):
         return torch.from_numpy(out), torch.from_numpy(idxs).long()
     xtr_t = None; ytr_t = None  # not used; we sample on the fly
 
-    model = HoldoutClassifier(n_classes=n_cls, hidden=args.hidden).to(DEVICE)
+    model = HoldoutClassifier(n_classes=n_cls, hidden=args.hidden,
+                                n_attn=args.n_attn, attn_heads=args.attn_heads).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
 
     steps_per_epoch = args.steps_per_epoch
@@ -321,7 +328,8 @@ def train_holdout_classifier(args):
         if acc > best:
             best = acc
             torch.save({"model": model.state_dict(), "n_classes": n_cls,
-                        "hidden": args.hidden},
+                        "hidden": args.hidden,
+                        "n_attn": args.n_attn, "attn_heads": args.attn_heads},
                        CHECKPOINTS / "holdout_classifier.pt")
         print(f"[holdout] epoch {epoch+1}/{args.epochs}  loss={np.mean(losses):.3f}  "
               f"eval-top1={acc*100:.2f}  best={best*100:.2f}  (K={K})")
@@ -341,6 +349,9 @@ def main():
     a.add_argument("--lr", type=float, default=3e-4)
     a.add_argument("--hidden", type=int, default=128)
     a.add_argument("--temp", type=float, default=0.07)
+    a.add_argument("--n_attn", type=int, default=0,
+                   help="transformer blocks on the [CLS] head (0 = original avgpool+MLP)")
+    a.add_argument("--attn_heads", type=int, default=4)
     a.add_argument("--workers", type=int, default=2)
     a.set_defaults(func=train_projector)
 
@@ -385,6 +396,9 @@ def main():
     a.add_argument("--batch", type=int, default=256)
     a.add_argument("--lr", type=float, default=3e-4)
     a.add_argument("--hidden", type=int, default=128)
+    a.add_argument("--n_attn", type=int, default=0,
+                   help="transformer blocks on the body's [CLS] head")
+    a.add_argument("--attn_heads", type=int, default=4)
     a.add_argument("--group", type=int, default=10,
                    help="K: how many train reps to average per training sample")
     a.set_defaults(func=train_holdout_classifier)

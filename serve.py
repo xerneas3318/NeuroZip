@@ -108,7 +108,9 @@ def load_state():
     cpath = CHECKPOINTS / "holdout_classifier.pt"
     if cpath.exists():
         st = torch.load(cpath, weights_only=False, map_location=DEVICE)
-        clf = HoldoutClassifier(n_classes=st["n_classes"], hidden=st["hidden"]).to(DEVICE)
+        clf = HoldoutClassifier(n_classes=st["n_classes"], hidden=st["hidden"],
+                                  n_attn=st.get("n_attn", 0),
+                                  attn_heads=st.get("attn_heads", 4)).to(DEVICE)
         clf.load_state_dict(st["model"]); clf.eval()
         State.classifier = clf
 

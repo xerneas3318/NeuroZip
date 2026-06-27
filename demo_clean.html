@@ -489,10 +489,11 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   });
   document.getElementById("text-query").addEventListener("keydown", e => { if (e.key==="Enter") document.getElementById("go").click(); });
   document.getElementById("randomize").addEventListener("click", () => {
-    if (featured.length) {
-      const i = featured[Math.floor(Math.random()*featured.length)];
-      sel.value = i; lastQuery = {concept_idx:i}; document.getElementById("text-query").value=""; runRetrieve();
-    }
+    // Pick any of the 200 test concepts uniformly at random.
+    const i = Math.floor(Math.random() * concepts.length);
+    sel.value = i; lastQuery = {concept_idx: i};
+    document.getElementById("text-query").value = "";
+    runRetrieve();
   });
   sel.addEventListener("change", () => { lastQuery = {concept_idx:+sel.value}; document.getElementById("text-query").value=""; runRetrieve(); });
   tier.addEventListener("input", () => {

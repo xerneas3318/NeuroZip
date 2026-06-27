@@ -428,10 +428,11 @@ footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid 
     if (e.key === "Enter") document.getElementById("go").click();
   });
   document.getElementById("randomize").addEventListener("click", () => {
-    if (featured.length) {
-      const i = featured[Math.floor(Math.random()*featured.length)];
-      sel.value = i; lastQuery = {concept_idx:i}; runRetrieve();
-    }
+    // Pick any of the 200 test concepts uniformly at random.
+    const i = Math.floor(Math.random() * concepts.length);
+    sel.value = i; lastQuery = {concept_idx: i};
+    document.getElementById("text-query").value = "";
+    runRetrieve();
   });
   sel.addEventListener("change", () => {
     lastQuery = {concept_idx: +sel.value};

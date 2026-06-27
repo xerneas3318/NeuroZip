@@ -5,6 +5,14 @@ generation. Trained and evaluated on `Haitao999/things-eeg`, subject `sub-01`,
 on a single RTX 4090. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the
 design rationale and the v1 → v4 evolution story.
 
+> **What every column means** is at the bottom in the [Glossary](#glossary).
+> Short version: **bpp** = bits per EEG sample (lower = more compressed);
+> **ratio** = compression vs raw fp16 storage (higher = more compressed);
+> **MSE** = waveform reconstruction error; **top-k** = chance the right
+> concept lands in the top-k retrievals (chance = k/200); **held-out** = an
+> independent classifier's accuracy on decompressed EEG (the circularity
+> defense).
+
 ## TL;DR
 
 > **NeuroZip preserves more retrievability per bit at every compression tier.**
@@ -199,3 +207,135 @@ Hyperparameters per stage are in `scripts/train_sweep_v4.sh`. The
 - **CLIP gotcha.** The dataset uses LAION-2B weights, not OpenAI. Using
   the wrong CLIP variant for inference silently breaks retrieval. See
   ARCHITECTURE.md for the cosine-distance evidence.
+
+## Glossary
+
+Definitions for every metric that appears above or in the demo UI.
+
+### `bpp` — bits per sample
+
+Average number of bits each EEG datapoint requires in the compressed
+representation. One epoch has 63 channels × 250 timesteps = **15,750
+samples**, so `bpp = total compressed bits per epoch ÷ 15,750`.
+
+- Raw fp16 storage = **16.0 bpp**.
+- `neurozip_v4_low` at `0.111 bpp` = each sample is encoded in 0.111 bits
+  on average, i.e. compressed by 16/0.111 = **144×**.
+- **Lower is better** (more compressed → less storage).
+
+Where it comes from: the codec encoder outputs a latent of shape
+(32 channels × 32 timesteps) = **1024 integer symbols per epoch**. The
+factorized Laplace prior estimates `bits per symbol = -log2 p(symbol)`.
+Then `bpp = (bits per symbol × 1024) ÷ 15,750`.
+
+### `ratio` — compression ratio vs fp16
+
+`16 ÷ bpp`. A ratio of `144×` means the compressed epoch is `1/144` the
+size of the raw fp16 epoch.
+
+- `144×` means a 31,500 B raw epoch becomes ~219 B compressed.
+- **Higher is better.**
+
+### `MSE` — reconstruction mean squared error
+
+Mean squared error between the raw and decompressed EEG, on **per-channel
+z-normalized signals** (each channel has mean 0, std 1 after normalization
+in `data.py`).
+
+- Units: squared fraction of one channel's standard deviation.
+- To convert to squared microvolts, multiply by the per-channel std² stored
+  in `data/norm_stats.pt`.
+- This is **waveform fidelity only** — a low-MSE codec can still throw
+  away semantic content, which is the whole reason NeuroZip uses an
+  additional task loss.
+
+### `top-1`, `top-5`, `top-10` — image-prompt retrieval
+
+For each of the 200 test concepts:
+1. Average that concept's 80 EEG repetitions (trial-averaging denoises).
+2. Compress + decompress through the codec under test.
+3. Pass the result through the frozen projector `P` to get a 512-dim
+   CLIP-space vector.
+4. Rank all 200 CLIP image embeddings by cosine similarity to that vector.
+5. Count it a "hit" if the gold concept's image lands in the top k.
+
+`top-k = fraction of concepts where the gold image is in the top-k
+retrievals`, averaged over all 200 concepts.
+
+- **Chance levels:** top-1 = 0.5%, top-5 = 2.5%, top-10 = 5.0%.
+- **Ceiling (raw uncompressed EEG via the same projector):**
+  18.5% / 45.0% / 65.0%. That's the "no compression" reference — every
+  codec's score should be read as a *fraction of that*.
+
+### `held-out top-1` — circularity defense
+
+A **separate** EEG→concept classifier (`train.py classifier`) is trained
+on 60 of the 80 test reps per concept (averaging blocks of 10 reps for
+SNR). It never sees codec output during its own training and uses a
+different loss (softmax cross-entropy) and architecture (the projector
+body + a linear classification head) from the projector.
+
+At evaluation we score this independent classifier's top-1 accuracy on
+each codec's decompressed test EEG.
+
+- This is the **circularity defense**: a high number means an independent
+  judge — which the codec's loss never optimized against — can still
+  identify the concept from the compressed signal. NeuroZip's win
+  generalizes beyond the projector it was trained with.
+- With the v4 attention judge, this classifier is so strong it saturates
+  near 100% for everything except `fidelity_v4_low` (88%), where the
+  fidelity baseline at 210× compression has actually lost content the
+  classifier can't recover.
+
+### `gold rank`
+
+Where the "correct" concept (highest CLIP-cos match to your query) ranked
+in this codec's retrieval list, out of 200. Rank 1 = the codec's top
+retrieval was the right one; rank 200 = it was the very last. **Lower is
+better.** The demo shows this per-query.
+
+### `CLIP cos`
+
+Cosine similarity between your free-text query (encoded by CLIP-text) and
+the *nearest of the 200 known test concepts* (also encoded by CLIP-text).
+Tells you how on-vocabulary your query is.
+
+- `cos ~0.7+` = query is well-matched to a known concept.
+- `cos ~0.3` = the closest test concept is a stretch; retrieval will look
+  noisy because the projector was trained to land near concrete object
+  embeddings.
+
+### `bits/symbol`
+
+Entropy of one quantized latent integer under the learned Laplace prior.
+Both fidelity and NeuroZip codecs produce the **same latent shape**
+(32 × 32 = 1024 symbols per epoch); what differs is how many bits each
+symbol costs on average.
+
+- `bpp = bits/symbol × 1024 ÷ 15,750`.
+- NeuroZip typically uses ~30–45% more bits/symbol than fidelity at the
+  same tier (the price of carrying more semantic content), which is why
+  NeuroZip's bpp is higher even though both produce 1024 symbols.
+
+### `tier` (`low` / `med` / `high` / `xhigh`)
+
+Four rate-distortion operating points along the codec's RD curve. Tuned
+via `lambda_rate` in the training loss:
+
+| tier | meaning | fidelity λ_rate | NeuroZip λ_rate |
+|---|---|---:|---:|
+| `low` | most aggressive compression | 0.05 | 0.07 |
+| `med` | medium | 0.01 | 0.015 |
+| `high` | less compression | 0.002 | 0.003 |
+| `xhigh` | least compression / max bits | 0.0003 | 0.0005 |
+
+NeuroZip uses a slightly higher `lambda_rate` per tier so the task term
+doesn't drift its bpp up; at the high/xhigh tiers this lands within ~5% of
+the fidelity bpp.
+
+### `featured` (in the demo dropdown)
+
+The 24 concepts where NeuroZip beats fidelity most decisively (most tiers
+where NeuroZip retrieves gold in top-5 minus the same count for fidelity).
+The demo's free "surprise me" button samples uniformly over all 200, but
+the dropdown puts these first so the demo lands on a compelling default.

@@ -93,6 +93,8 @@ footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid 
 .aggregate-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
 .aggregate-grid > div{background:var(--panel);border:1px solid #232737;border-radius:10px;padding:10px}
 .aggregate-grid img{width:100%;border-radius:6px}
+.tip{position:relative;cursor:help;border-bottom:1px dotted var(--muted)}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--panel2);color:var(--txt);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:6px;width:240px;text-align:left;z-index:100;line-height:1.45;pointer-events:none;border:1px solid #2a3045;box-shadow:0 6px 24px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>

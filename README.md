@@ -10,6 +10,13 @@ compression ratio loses retrievability.
 > **One-sentence pitch.** The same frozen model that decides what to throw
 > away during compression is what lets you text-search what you kept.
 
+> **Where do I go next?**
+> - This README: install, run, the numbers, the file map.
+> - [`ARCHITECTURE.md`](ARCHITECTURE.md): the *why* — design rationale, the
+>   v1 → v4 evolution, the three easy-to-get-wrong spots in detail, the
+>   CLIP-variant gotcha, and the circularity defense.
+> - Inline docstrings in each module explain how individual pieces work.
+
 ## How it works
 
 ```
@@ -39,16 +46,22 @@ P + CLIP are frozen, but **gradient flows through P** into the codec decoder
 ## Architecture / data
 
 - **Dataset:** `Haitao999/things-eeg` (THINGS-EEG, Gifford et al. 2022; CVPR
-  2025 release by Wu et al.). Single subject (sub-01), 63 channels @ 250 Hz,
+  2025 re-release by Wu et al.). Single subject (sub-01), 63 channels @ 250 Hz,
   250-sample epochs. Train: 16 540 image-trials × 4 reps. Test: 200 concepts
   × 80 reps.
 - **Frozen judge:** ViT-B/32 CLIP image/text features come precomputed in the
-  dataset, so we never invoke CLIP at runtime.
+  dataset (LAION-2B weights — *not* OpenAI; see [`ARCHITECTURE.md`](ARCHITECTURE.md)
+  for the gotcha). We never invoke CLIP at training.
 - **Projector P:** depthwise temporal conv → channel-mix → 4-stage conv tower
-  → AvgPool → MLP → L2-norm. 5.8 M params.
-- **Codec:** 1D-conv autoencoder, latent (32 ch × 32 ts), factorized Laplace
-  prior for rate, uniform-noise quantizer at training, integer round at
-  inference.
+  → ([CLS] + transformer blocks if `n_attn>0`) → L2-norm. 2.5 M params (conv)
+  or 6.0 M (attention).
+- **Codec:** 1D-conv autoencoder with optional ViT bottleneck, latent
+  (32 ch × 32 ts), factorized Laplace prior for rate, uniform-noise
+  quantizer at training, integer round at inference. **Default: conv-only**
+  (~0.75 M params) — see ARCHITECTURE for why attention here actually hurts
+  the story.
+- **Recommended generation: v4** — conv-only codec + attention projector
+  + attention held-out classifier. Train with `./train.sh sweep_v4`.
 
 ## Numbers (sub-01, trial-averaged 80 reps; image-prompt retrieval, top-5 over 200 concepts)
 
@@ -81,19 +94,25 @@ The money plot: `demo/assets/rate_retrieval.png`.
 
 ## Run
 
-Two convenience scripts cover the common workflow:
+Three convenience scripts cover the common workflow:
 
 ```bash
-# 1. one-shot: venv + dataset subset + all training stages (idempotent)
-./train.sh
+# 1. one-shot training: venv + dataset subset + all stages (idempotent)
+./train.sh              # full pipeline (currently v2 codecs — see variants below)
+./train.sh sweep_v4     # recommended generation (conv codec + attention judge)
 
-# 2. live demo (binds 0.0.0.0:8011 by default, LAN-visible)
+# 2. live demo backend (binds 0.0.0.0:8011 by default, LAN-visible)
 ./serve.sh
 # then open http://<host>:8011/
 
+# 3. standalone Jupyter viewer (no Flask required)
+.venv/bin/jupyter notebook notebook.ipynb
+
 # variants
-./train.sh sweep_v3      # just the v3 attention-projector cascade
+./train.sh sweep_v2      # ViT-bottleneck codec sweep
+./train.sh sweep_v3      # v3 cascade: ViT codec + attention projector retrain
 ./train.sh eval          # re-run evaluation + regenerate demo assets
+./train.sh proj_only     # just retrain the projector
 HOST=127.0.0.1 ./serve.sh   # local-only
 PORT=8000 ./serve.sh        # change port
 ```
@@ -124,17 +143,26 @@ Each stage is independently runnable:
 | file | purpose |
 |---|---|
 | `data.py` | THINGS-EEG dataset loader + per-channel normalization stats |
-| `clip_proj.py` | EEG → CLIP projector `P` (Stage 1 judge) |
-| `codec.py` | 1D-conv codec + factorized Laplace prior + noise/round quantizer |
+| `clip_proj.py` | EEG → CLIP projector `P` (the frozen judge) |
+| `codec.py` | 1D-conv codec (optional ViT bottleneck) + factorized Laplace prior + noise/round quantizer |
 | `train.py` | CLI: `proj`, `codec`, `neurozip`, `classifier` |
-| `evaluate.py` | Matched-bpp comparison, plot, demo JSON, image copy |
-| `serve.py`  | Flask backend: live CLIP text encoding, on-demand codec reconstruction, server-rendered figures |
+| `evaluate.py` | Matched-bpp comparison, rate-retrieval plot, demo JSON, image copy |
+| `serve.py` | Flask backend: live CLIP text encoding, on-demand codec reconstruction, server-rendered figures |
 | `demo.html` | Live demo (talks to `serve.py`) with free-text query + reconstruction viewer |
+| `notebook.ipynb` | Standalone Jupyter viewer; auto-detects which codec generation is on disk |
+| `scripts/build_notebook.py` | Regenerable notebook source — edit + re-run to rebuild `notebook.ipynb` |
+| `scripts/download_data.sh` | Targeted ~3 GB subset download (not the 33k-file naive load) |
+| `scripts/train_sweep_v2.sh` | ViT-bottleneck codec sweep (4 tiers) |
+| `scripts/train_sweep_v3.sh` | NeuroZip codecs against the attention projector |
+| `scripts/train_sweep_v4.sh` | **Recommended.** Conv-only codecs against attention projector |
+| `scripts/train_v3_chain.sh` | Convenience: projector retrain → classifier → v3 sweep |
 | `run_all.sh` | End-to-end pipeline (idempotent — re-runs cheaply) |
+| `train.sh` / `serve.sh` | One-shot entry points |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Design rationale & v1 → v4 evolution |
 
 ## The three easy-to-get-wrong spots
 
-Documented inline in code; reproduced here:
+Explained in depth in [`ARCHITECTURE.md`](ARCHITECTURE.md). Tl;dr:
 
 1. **Gradient flow through the frozen judge.** `P` and CLIP are frozen
    (`requires_grad_(False)` and `no_grad` on the target embedding) but the

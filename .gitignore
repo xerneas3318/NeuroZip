@@ -11,6 +11,12 @@ venv/
 # Data (~3 GB; users re-download via scripts/download_data.sh)
 data/
 
+# Trained model checkpoints (~190 MB; users regenerate via ./train.sh)
+# All .pt weights and per-codec training logs.
+checkpoints/*.pt
+checkpoints/*.json
+data/norm_stats.pt
+
 # Logs
 logs/*.log
 logs/

@@ -52,7 +52,9 @@ def load_holdout(test_ds: ThingsEEG) -> HoldoutClassifier:
     if not path.exists():
         return None
     state = torch.load(path, weights_only=False, map_location=DEVICE)
-    model = HoldoutClassifier(n_classes=state["n_classes"], hidden=state["hidden"]).to(DEVICE)
+    model = HoldoutClassifier(n_classes=state["n_classes"], hidden=state["hidden"],
+                                n_attn=state.get("n_attn", 0),
+                                attn_heads=state.get("attn_heads", 4)).to(DEVICE)
     model.load_state_dict(state["model"]); model.eval()
     return model
 

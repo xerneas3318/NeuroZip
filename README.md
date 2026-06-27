@@ -81,25 +81,31 @@ The money plot: `demo/assets/rate_retrieval.png`.
 
 ## Run
 
+Two convenience scripts cover the common workflow:
+
+```bash
+# 1. one-shot: venv + dataset subset + all training stages (idempotent)
+./train.sh
+
+# 2. live demo (binds 0.0.0.0:8011 by default, LAN-visible)
+./serve.sh
+# then open http://<host>:8011/
+
+# variants
+./train.sh sweep_v3      # just the v3 attention-projector cascade
+./train.sh eval          # re-run evaluation + regenerate demo assets
+HOST=127.0.0.1 ./serve.sh   # local-only
+PORT=8000 ./serve.sh        # change port
+```
+
+If you prefer to invoke things by hand:
+
 ```bash
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install -r requirements.txt
-
-# Downloads only the files NeuroZip actually needs (~3 GB), not the whole
-# 33k-file dataset.
-bash scripts/download_data.sh
-
-# Stage 0 -> 5 end-to-end. Skips anything already cached on disk.
-bash run_all.sh
-
-# Live demo (free-text CLIP retrieval + reconstruction viewer + figures):
-.venv/bin/python serve.py --host 127.0.0.1 --port 8011
-# then open http://localhost:8011/
-
-# Or the static, precomputed-only demo (no server required):
-python3 -m http.server 8000
-# then open http://localhost:8000/demo.html — but free-text queries and the
-# reconstruction viewer will not work in this mode.
+bash scripts/download_data.sh        # ~3 GB targeted subset
+bash run_all.sh                       # all stages
+.venv/bin/python serve.py --host 0.0.0.0 --port 8011
 ```
 
 Each stage is independently runnable:

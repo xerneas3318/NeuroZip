@@ -27,6 +27,9 @@ datasets/
 demo_assets/
 *.log
 
+# ---- NeuroZip archives (CLI output) ----
+*.nz
+
 # ---- OS / editor ----
 .DS_Store
 .idea/

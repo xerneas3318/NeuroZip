@@ -144,6 +144,30 @@ table.codec-table tr.us td.metric-strong { color: var(--accent); font-weight: 60
 .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Tooltip on metric labels */
+.tip { position: relative; cursor: help; border-bottom: 1px dotted var(--ink-muted); }
+.tip:hover::after, .tip:focus::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: white; font-size: 11px; font-weight: 400;
+  letter-spacing: 0; text-transform: none;
+  padding: 8px 10px; border-radius: 6px; width: 240px; text-align: left;
+  z-index: 100; line-height: 1.45; pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18);
+}
+.tip:hover::before, .tip:focus::before {
+  content: ""; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink); z-index: 100;
+}
+
+/* Glossary section */
+.glossary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-6); margin-bottom: var(--space-5); box-shadow: var(--shadow); }
+.glossary h2 { margin-bottom: var(--space-4); }
+.glossary dl { display: grid; grid-template-columns: 180px 1fr; gap: var(--space-3) var(--space-5); margin: 0; }
+.glossary dt { font-weight: 600; color: var(--ink); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; padding-top: 2px; }
+.glossary dd { color: var(--ink-2); font-size: 13px; margin: 0; line-height: 1.55; }
+.glossary dd code { font-size: 12px; }
+
 footer { color: var(--ink-muted); font-size: 12px; padding: var(--space-5) 0; border-top: 1px solid var(--border); margin-top: var(--space-7); }
 footer a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--border); }
 </style>
@@ -165,23 +189,23 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
     <div class="hero-card us">
       <div class="row"><div class="label">NeuroZip</div><div class="label" id="hero-us-name" style="font-family:monospace;color:var(--ink-2)">—</div></div>
       <div class="num us" id="hero-us-top5">—</div>
-      <div class="stat">image-prompt retrieval <b>top-5</b> on 200 test concepts</div>
+      <div class="stat">image-prompt retrieval <b class="tip" data-tip="top-5: chance that the correct concept is among the 5 nearest EEG epochs in CLIP space, averaged over all 200 test concepts. Chance level = 5/200 = 2.5%.">top-5</b> on 200 test concepts</div>
       <div class="stat-sub" id="hero-us-detail">— bpp · — × compression vs fp16</div>
     </div>
     <div class="hero-card them">
       <div class="row"><div class="label">Fidelity baseline</div><div class="label" id="hero-them-name" style="font-family:monospace;color:var(--ink-2)">—</div></div>
       <div class="num them" id="hero-them-top5">—</div>
-      <div class="stat">same architecture, MSE-only training</div>
+      <div class="stat">same architecture, <span class="tip" data-tip="Trained with only rate + reconstruction MSE; no task loss. The codec doesn't know what the EEG is *about*.">MSE-only training</span></div>
       <div class="stat-sub" id="hero-them-detail">— bpp · — × compression vs fp16</div>
     </div>
   </section>
 
   <!-- Stat strip -->
   <div class="statstrip" id="statstrip">
-    <div class="cell"><div class="k">codec generation</div><div class="v" id="ss-gen">—</div><div class="sub">conv codec + attention judge</div></div>
-    <div class="cell"><div class="k">test concepts</div><div class="v">200</div><div class="sub">distinct objects, 80 reps each</div></div>
-    <div class="cell"><div class="k">epoch size (raw fp16)</div><div class="v">31.5 kB</div><div class="sub">63 ch × 250 ts × 2 B</div></div>
-    <div class="cell"><div class="k">epoch size (NeuroZip)</div><div class="v" id="ss-bpp">—</div><div class="sub">at headline tier</div></div>
+    <div class="cell"><div class="k tip" data-tip="Which retraining iteration produced these checkpoints. v4 = conv-only codec + attention projector + attention classifier. See ARCHITECTURE.md for the v1→v4 history.">codec generation</div><div class="v" id="ss-gen">—</div><div class="sub">conv codec + attention judge</div></div>
+    <div class="cell"><div class="k tip" data-tip="200 distinct object concepts in the THINGS-EEG test split (e.g. aardvark, accordion, basketball). Each concept has 80 EEG repetitions; we trial-average them at eval.">test concepts</div><div class="v">200</div><div class="sub">distinct objects, 80 reps each</div></div>
+    <div class="cell"><div class="k tip" data-tip="Raw EEG epoch at fp16: 63 channels × 250 timesteps × 2 bytes = 31,500 bytes per epoch. This is the storage floor we're compressing against.">epoch size (raw fp16)</div><div class="v">31.5 kB</div><div class="sub">63 ch × 250 ts × 2 B</div></div>
+    <div class="cell"><div class="k tip" data-tip="Compressed epoch size at the headline tier: bpp × 15,750 EEG samples ÷ 8 bits per byte. This is what you'd actually ship over the wire per epoch.">epoch size (NeuroZip)</div><div class="v" id="ss-bpp">—</div><div class="sub">at headline tier</div></div>
   </div>
 
   <!-- Retrieval section -->
@@ -228,10 +252,10 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
         </div>
         <div class="grid" id="grid-nzn"></div>
         <div class="metrics-row">
-          <div class="metric"><span class="k">bpp ↓</span><span class="v us" id="nzn-bpp">—</span></div>
-          <div class="metric"><span class="k">ratio</span><span class="v" id="nzn-ratio">—</span></div>
-          <div class="metric"><span class="k">top-5</span><span class="v us" id="nzn-t5">—</span></div>
-          <div class="metric"><span class="k">held-out</span><span class="v" id="nzn-hold">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="bits per sample — average bits each EEG datapoint requires after compression. Lower = more compressed. Raw fp16 = 16.0 bpp.">bpp ↓</span><span class="v us" id="nzn-bpp">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="Compression ratio vs raw fp16 storage. 144× means the compressed epoch is 1/144 the size of the original.">ratio</span><span class="v" id="nzn-ratio">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts: chance the gold concept is in the 5 nearest decompressed-EEG embeddings. Chance level = 2.5%.">top-5</span><span class="v us" id="nzn-t5">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="Top-1 accuracy of a separate concept classifier (trained on held-out test reps; never sees codec output during its own training) when classifying this codec's decompressed EEG. Independent judge — the circularity defense.">held-out</span><span class="v" id="nzn-hold">—</span></div>
         </div>
       </div>
       <div class="pane">
@@ -245,10 +269,10 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
         </div>
         <div class="grid" id="grid-fid"></div>
         <div class="metrics-row">
-          <div class="metric"><span class="k">bpp ↓</span><span class="v" id="fid-bpp">—</span></div>
-          <div class="metric"><span class="k">ratio</span><span class="v" id="fid-ratio">—</span></div>
-          <div class="metric"><span class="k">top-5</span><span class="v" id="fid-t5">—</span></div>
-          <div class="metric"><span class="k">held-out</span><span class="v" id="fid-hold">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="bits per sample — average bits each EEG datapoint requires after compression. Lower = more compressed. Raw fp16 = 16.0 bpp.">bpp ↓</span><span class="v" id="fid-bpp">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="Compression ratio vs raw fp16 storage. 210× means the compressed epoch is 1/210 the size of the original.">ratio</span><span class="v" id="fid-ratio">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts. Chance level = 2.5%.">top-5</span><span class="v" id="fid-t5">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="Independent held-out classifier accuracy on this codec's decompressed EEG. Saturating near 100% means the classifier can identify the concept; if low, content is being lost.">held-out</span><span class="v" id="fid-hold">—</span></div>
         </div>
       </div>
     </div>
@@ -265,17 +289,17 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
     </div>
 
     <div class="viewer-stats" id="viewer-stats">
-      <div class="item"><span class="k">raw:</span><span class="v">63 ch × 250 ts</span></div>
-      <div class="item"><span class="k">NeuroZip:</span><span class="v" id="vh-nzn">— bpp · MSE —</span></div>
-      <div class="item"><span class="k">fidelity:</span><span class="v" id="vh-fid">— bpp · MSE —</span></div>
+      <div class="item"><span class="k tip" data-tip="Trial-averaged input EEG for this concept: averaging the 80 repetitions per concept denoises the signal substantially.">raw:</span><span class="v">63 ch × 250 ts (avg 80 reps)</span></div>
+      <div class="item"><span class="k tip" data-tip="Bits per sample and reconstruction MSE on this specific epoch's decompressed output. bpp = total compressed bits ÷ 15,750 samples. MSE is on z-normalized EEG (per-channel mean=0, std=1).">NeuroZip:</span><span class="v" id="vh-nzn">— bpp · MSE —</span></div>
+      <div class="item"><span class="k tip" data-tip="Same metrics for the fidelity baseline (MSE+rate only, no task loss).">fidelity:</span><span class="v" id="vh-fid">— bpp · MSE —</span></div>
       <div class="item" id="vh-status"></div>
     </div>
 
     <div class="figs">
-      <div class="fig-cell wide"><h3>Raw vs decompressed — channel × time heatmap</h3><img id="fig-heatmap" /></div>
-      <div class="fig-cell wide"><h3>Per-channel waveforms</h3><img id="fig-waveforms" /></div>
-      <div class="fig-cell"><h3>Reconstruction error</h3><img id="fig-diff" /></div>
-      <div class="fig-cell"><h3>Quantized latent (the shipped data)</h3><img id="fig-latent" /></div>
+      <div class="fig-cell wide"><h3 class="tip" data-tip="Each row is one EEG channel, columns are timesteps from -200ms to +996ms relative to stimulus onset. Color = normalized amplitude (σ units). All three panels share the same color scale so you can compare reconstructions visually.">Raw vs decompressed — channel × time heatmap</h3><img id="fig-heatmap" /></div>
+      <div class="fig-cell wide"><h3 class="tip" data-tip="6 representative scalp channels plotted as time-series. Black = raw EEG, red = NeuroZip reconstruction, gray dashed = fidelity reconstruction. Vertical line at 0ms = stimulus onset.">Per-channel waveforms</h3><img id="fig-waveforms" /></div>
+      <div class="fig-cell"><h3 class="tip" data-tip="|raw − reconstruction| for each codec, shared color scale. Brighter = more error at that (channel, time) cell. MSE label is the mean of this map.">Reconstruction error</h3><img id="fig-diff" /></div>
+      <div class="fig-cell"><h3 class="tip" data-tip="The 32×32 = 1024 integer symbols the codec ships over the wire (one heatmap per codec). Symbol values are color-coded. NeuroZip typically uses more dynamic range (more distinct integers) than fidelity at the same architecture.">Quantized latent (the shipped data)</h3><img id="fig-latent" /></div>
     </div>
   </section>
 
@@ -295,11 +319,69 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
       </div>
       <div class="table-wrap">
         <table class="codec-table" id="codec-table">
-          <thead><tr><th>codec</th><th>bpp</th><th>ratio</th><th>MSE</th><th>top-1</th><th>top-5</th><th>top-10</th><th>held-out</th></tr></thead>
+          <thead><tr>
+            <th>codec</th>
+            <th class="tip" data-tip="bits per sample (lower = more compressed)">bpp</th>
+            <th class="tip" data-tip="compression ratio vs fp16 (higher = more compressed)">ratio</th>
+            <th class="tip" data-tip="mean squared error on z-normalized EEG">MSE</th>
+            <th class="tip" data-tip="top-1 image-prompt retrieval (chance = 0.5%)">top-1</th>
+            <th class="tip" data-tip="top-5 image-prompt retrieval (chance = 2.5%)">top-5</th>
+            <th class="tip" data-tip="top-10 image-prompt retrieval (chance = 5.0%)">top-10</th>
+            <th class="tip" data-tip="independent held-out classifier accuracy on decompressed EEG">held-out</th>
+          </tr></thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
+  </section>
+
+  <section class="glossary">
+    <h2>Glossary — what every number on this page means</h2>
+    <dl>
+      <dt>bpp</dt>
+      <dd><b>bits per sample.</b> Average number of bits each raw EEG datapoint needs in the compressed representation.
+        One epoch has 63 channels × 250 timesteps = <b>15,750 samples</b>. <code>bpp = total bits per epoch ÷ 15,750</code>.
+        Raw fp16 storage = 16 bpp. <b>Lower is better</b> (more compressed).</dd>
+
+      <dt>ratio</dt>
+      <dd><b>Compression ratio vs raw fp16</b>: <code>16 ÷ bpp</code>. A ratio of 144× means the compressed epoch is 1/144 the
+        size of the original. <b>Higher is better.</b></dd>
+
+      <dt>MSE</dt>
+      <dd><b>Mean squared error</b> between the raw and decompressed EEG, computed on per-channel z-normalized signals
+        (so units are "fraction of one channel's standard deviation, squared"). Pure waveform fidelity; doesn't care about
+        semantic content. <b>Lower is better.</b></dd>
+
+      <dt>top-1, top-5, top-10</dt>
+      <dd><b>Image-prompt retrieval accuracy.</b> For each of the 200 test concepts, take the trial-averaged EEG, compress
+        and decompress it, project to CLIP space, and rank all 200 CLIP image embeddings by cosine similarity. Top-k = fraction
+        of concepts where the gold image is in the top k retrievals. <b>Chance levels: 0.5% / 2.5% / 5.0%</b> — anything above those
+        beats random. The projector P (frozen judge) hits 18.5 / 45.0 / 65.0% on raw uncompressed EEG; that's the ceiling.</dd>
+
+      <dt>held-out</dt>
+      <dd><b>Independent classifier top-1.</b> A separate EEG → concept classifier is trained on 60 of the 80 test reps per
+        concept (averaging blocks of 10 reps for SNR) — it never sees codec output during its own training. At evaluation we
+        score its top-1 on each codec's decompressed test EEG. This is the <b>circularity defense</b>: a high number means
+        an independent judge can still identify the concept after compression, so the win isn't gaming the projector.</dd>
+
+      <dt>gold rank</dt>
+      <dd>Where the "correct" concept (highest CLIP-cos match to your query) was ranked in this codec's retrieval list.
+        Rank 1 = top result; rank 200 = last. The lower the better.</dd>
+
+      <dt>CLIP cos</dt>
+      <dd>Cosine similarity between your free-text query (encoded by CLIP-text) and the nearest of the 200 known test
+        concepts (encoded by CLIP-text). Tells you how on-vocabulary your query is. Cos ~0.7+ means the query is well-
+        matched; lower means it's a stretch and retrieval will be noisier.</dd>
+
+      <dt>bits/symbol</dt>
+      <dd>Entropy of one quantized latent integer. Both codecs produce a fixed latent shape of <b>32×32 = 1024
+        symbols per epoch</b>; what differs is the bits each symbol costs under the learned Laplace prior. <code>bpp = bits/symbol × 1024 ÷ 15,750</code>.</dd>
+
+      <dt>tier (low / med / high / xhigh)</dt>
+      <dd>Four rate-distortion operating points, controlled by <code>lambda_rate</code> in training. <b>low</b> = most aggressive
+        compression (smallest bpp, biggest ratio); <b>xhigh</b> = least compression (biggest bpp, smallest ratio). NeuroZip uses
+        slightly higher lambda_rate per tier to keep its bpp from drifting up under the task loss.</dd>
+    </dl>
   </section>
 
   <footer>

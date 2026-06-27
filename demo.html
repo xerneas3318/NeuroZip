@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NeuroZip — task-aware EEG compression</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+:root {
+  --bg:#0f1115; --panel:#161922; --panel2:#1c2030; --txt:#e6e8ee;
+  --muted:#8a93a6; --accent:#d62728; --ok:#4caf50;
+  --nzn:#d62728; --fid:#7c8497;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:'Inter',-apple-system,system-ui,sans-serif;}
+header{padding:24px 32px;border-bottom:1px solid #232737;}
+h1{margin:0 0 4px;font-size:22px}
+h1 span{color:var(--accent)}
+.tag{color:var(--muted);font-size:13px}
+main{display:grid;grid-template-columns:380px 1fr;gap:24px;padding:24px 32px;}
+.controls{background:var(--panel);border:1px solid #232737;border-radius:12px;padding:20px;
+          position:sticky;top:20px;align-self:start;max-height:calc(100vh - 40px);overflow-y:auto;}
+.controls label{display:block;margin-top:14px;font-size:12px;color:var(--muted);
+                text-transform:uppercase;letter-spacing:1px;}
+.controls select,.controls input[type=text],.controls input[type=range]{
+  width:100%;padding:8px 10px;border-radius:8px;background:var(--panel2);
+  border:1px solid #2a3045;color:var(--txt);font-size:14px;margin-top:6px;}
+.controls input[type=range]{padding:0;height:24px}
+.controls input[type=text]{font-family:inherit}
+.controls .row{display:flex;gap:10px;align-items:center}
+.controls .btn{margin-top:8px;padding:8px 14px;border-radius:8px;border:1px solid #2a3045;
+               background:var(--accent);color:#fff;font-size:13px;cursor:pointer;font-weight:600}
+.controls .btn:hover{filter:brightness(1.1)}
+.controls .btn.secondary{background:var(--panel2);color:var(--txt)}
+.bppstat{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+.bppstat .cell{background:var(--panel2);padding:10px 12px;border-radius:8px;flex:1;min-width:140px}
+.bppstat .cell .v{font-size:18px;font-weight:600;color:var(--txt)}
+.bppstat .cell .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.bppstat .cell.ours .v{color:var(--nzn)}
+.bppstat .cell.fid  .v{color:var(--muted)}
+.arrow-down,.arrow-up{color:var(--ok);font-weight:600}
+.readout{margin-top:14px;padding:12px;background:var(--panel2);border-radius:10px;font-size:13px;line-height:1.55}
+.readout small{color:var(--muted);font-size:11px}
+.legend{margin-top:12px;padding:10px 12px;background:var(--panel2);border-radius:8px;font-size:11px;
+        color:var(--muted);line-height:1.5;}
+.legend code{color:var(--txt);background:#0a0c12;padding:1px 5px;border-radius:3px}
+.legend .arrow{color:var(--ok);font-weight:600}
+.plot{margin-top:18px}
+.plot img{width:100%;border-radius:10px;border:1px solid #232737;background:#fff}
+
+section{margin-bottom:24px}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{background:var(--panel);border:1px solid #232737;border-radius:12px;padding:18px}
+.panel h2{margin:0 0 4px;font-size:14px;letter-spacing:1px;text-transform:uppercase;
+          display:flex;align-items:center;gap:8px;color:#e6e8ee}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.ours{background:var(--nzn)} .dot.fid{background:var(--fid)}
+.panel .sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.card{background:var(--panel2);border-radius:8px;overflow:hidden;position:relative;aspect-ratio:1;
+      cursor:pointer;transition:transform .12s}
+.card:hover{transform:scale(1.04)}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.card .lbl{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.85),transparent);
+           color:#fff;font-size:10px;padding:8px 6px 4px;text-transform:lowercase}
+.card.gold{outline:2px solid var(--ok)}
+.card.selected{outline:2px solid #ffbe3d}
+.card .rank{position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.55);border-radius:4px;
+            padding:1px 5px;font-size:10px;color:#fff}
+.gtwrap{margin-bottom:14px;display:flex;gap:14px;align-items:center}
+.gtwrap img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:2px solid var(--ok)}
+.gtwrap .gt{font-size:12px;color:var(--muted)}
+.gtwrap .gt strong{display:block;font-size:18px;color:var(--txt);text-transform:lowercase;margin-bottom:2px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;background:var(--panel2);color:var(--muted);margin-left:6px}
+
+.section-title{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+               margin:8px 0 14px;font-weight:600}
+.section-title b{color:var(--txt)}
+
+.viewer{background:var(--panel);border:1px solid #232737;border-radius:12px;padding:18px}
+.viewer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.viewer-grid > div{background:var(--panel2);border-radius:8px;padding:10px;}
+.viewer-grid > div h3{margin:0 0 6px;font-size:11px;letter-spacing:1px;color:var(--muted);
+                      text-transform:uppercase}
+.viewer-grid img{width:100%;border-radius:6px;display:block}
+.viewer-headline{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--muted)}
+.viewer-headline span{background:var(--panel2);padding:6px 12px;border-radius:6px}
+.viewer-headline .v{color:var(--txt);font-weight:600}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #555;border-top-color:var(--accent);
+         border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.diff-up{color:var(--ok)} .diff-down{color:#e35353}
+footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid #232737}
+.aggregate-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.aggregate-grid > div{background:var(--panel);border:1px solid #232737;border-radius:10px;padding:10px}
+.aggregate-grid img{width:100%;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Neuro<span>Zip</span> &mdash; task-aware EEG compression</h1>
+  <div class="tag">type a concept &rarr; live CLIP encode &rarr; retrieve the EEG epoch the subject saw, after compression.
+    Click any retrieval to inspect the reconstructed waveform vs. the original.</div>
+</header>
+<main>
+
+<!-- ============== CONTROLS PANEL ============== -->
+<aside class="controls">
+
+  <label for="text-query">free-text query</label>
+  <input id="text-query" type="text" placeholder='e.g. "a small flightless bird"' />
+  <div class="row" style="margin-top:8px;gap:8px;">
+    <button class="btn" id="go">retrieve</button>
+    <button class="btn secondary" id="randomize">surprise me</button>
+  </div>
+
+  <label for="concept">or pick a featured concept</label>
+  <select id="concept"></select>
+
+  <label for="tier">compression tier</label>
+  <input id="tier" type="range" min="0" max="2" value="1" step="1" />
+  <div id="tier-readout" class="tag" style="margin-top:6px;"></div>
+
+  <div class="bppstat">
+    <div class="cell ours">
+      <div class="l">NeuroZip <span class="arrow-down">bpp &darr;</span></div>
+      <div class="v" id="bpp-ours">—</div>
+      <div class="l" style="margin-top:2px;"><span id="ratio-ours">—</span> vs fp16</div>
+    </div>
+    <div class="cell fid">
+      <div class="l">fidelity <span class="arrow-down">bpp &darr;</span></div>
+      <div class="v" id="bpp-fid">—</div>
+      <div class="l" style="margin-top:2px;"><span id="ratio-fid">—</span> vs fp16</div>
+    </div>
+  </div>
+
+  <div class="readout" id="metric-readout">
+    <span class="tag">retrieval top-5 <span class="arrow-up">&uarr;</span> (test-set aggregate)</span><br>
+    <span style="color:var(--nzn)"><b id="m-ours">—</b> NeuroZip</span>
+    &nbsp;vs&nbsp;
+    <span style="color:var(--fid)"><b id="m-fid">—</b> fidelity</span><br>
+    <small id="m-detail"></small><br><br>
+    <small id="m-holdout"></small>
+  </div>
+
+  <div class="legend">
+    <b>bpp</b> = bits per EEG sample. One epoch is 63&times;250 = 15,750 samples.<br>
+    &darr; <span class="arrow">lower bpp = more compressed</span> (better storage).<br>
+    &uarr; <span class="arrow">higher retrieval %</span> = more task info kept (better quality).<br>
+    Goal: <b>low bpp + high retrieval</b>. Raw EEG @ <code>16 bpp</code> (fp16) is the upper bound.
+  </div>
+
+  <div class="plot">
+    <label style="margin-top:18px;display:block;">rate &mdash; retrieval curve</label>
+    <img src="/demo/assets/rate_retrieval.png" alt="rate-retrieval plot" />
+  </div>
+</aside>
+
+<!-- ============== MAIN COLUMN ============== -->
+<div style="min-width:0;">
+
+<section>
+  <div class="section-title">1 · text-prompt &rarr; <b>retrieved EEG epochs</b></div>
+  <div id="query-readout" class="tag" style="margin-bottom:10px;"></div>
+  <div class="results">
+    <div class="panel">
+      <h2><span class="dot ours"></span>NeuroZip <span class="badge" id="nzn-badge"></span></h2>
+      <div class="sub">EEG epochs retrieved by P after compression+decompression with the task-aware codec. Click any to inspect.</div>
+      <div id="gt-nzn" class="gtwrap"></div>
+      <div id="grid-nzn" class="grid"></div>
+    </div>
+    <div class="panel">
+      <h2><span class="dot fid"></span>fidelity baseline <span class="badge" id="fid-badge"></span></h2>
+      <div class="sub">Same architecture, same bpp target, MSE-only training. No task knowledge.</div>
+      <div id="gt-fid" class="gtwrap"></div>
+      <div id="grid-fid" class="grid"></div>
+    </div>
+  </div>
+</section>
+
+<section class="viewer">
+  <div class="section-title">2 · <b>reconstruction viewer</b> &mdash; epoch <span id="ep-num">—</span> (<span id="ep-concept">—</span>)</div>
+  <div class="viewer-headline">
+    <span>raw EEG: <span class="v">63 ch × 250 ts</span></span>
+    <span>NeuroZip: <span class="v" id="vh-nzn-bpp">—</span> bpp · MSE <span class="v" id="vh-nzn-mse">—</span></span>
+    <span>fidelity: <span class="v" id="vh-fid-bpp">—</span> bpp · MSE <span class="v" id="vh-fid-mse">—</span></span>
+    <span id="vh-status"></span>
+  </div>
+  <div class="viewer-grid">
+    <div style="grid-column:span 2"><h3>raw vs reconstructed (heatmap, channel × time)</h3><img id="fig-heatmap" alt="" /></div>
+    <div style="grid-column:span 2"><h3>per-channel waveforms (raw vs NeuroZip vs fidelity)</h3><img id="fig-waveforms" alt="" /></div>
+    <div><h3>error magnitude</h3><img id="fig-diff" alt="" /></div>
+    <div><h3>quantized latent (the "shipped" data)</h3><img id="fig-latent" alt="" /></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">3 · <b>test-set aggregates</b> &mdash; how the codec behaves on average</div>
+  <div class="aggregate-grid">
+    <div><h3 style="margin:0 0 4px;font-size:12px;color:var(--muted);text-transform:uppercase">per-channel reconstruction error</h3>
+         <img id="fig-channel-mse" alt="" /></div>
+    <div><h3 style="margin:0 0 4px;font-size:12px;color:var(--muted);text-transform:uppercase">entropy distribution (bits per latent symbol)</h3>
+         <img id="fig-bit-hist" alt="" /></div>
+  </div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  Live inference via Flask backend (<code>serve.py</code>) on top of the codec checkpoints in <code>checkpoints/</code>.
+  CLIP weights: ViT-B-32 / laion2b_s34b_b79k (matches the dataset's precomputed image+text features).
+  Data: THINGS-EEG (Gifford 2022; Wu CVPR 2025 re-release).
+</footer>
+
+<script>
+(async function() {
+  const fmt = (x, d=1) => (x==null ? "—" : (100*x).toFixed(d) + "%");
+
+  // ---------- bootstrap ----------
+  const [modelsRes, conceptsRes] = await Promise.all([
+    fetch("/api/models").then(r=>r.json()),
+    fetch("/api/concepts").then(r=>r.json()),
+  ]);
+  const allModels = modelsRes;            // {name: {bpp, mse, img_top1, ...}}
+  const concepts = conceptsRes.concepts;
+
+  // Prefer v2 (ViT) models if present; otherwise fall back to the conv-only v1.
+  const hasV2 = Object.keys(allModels).some(n => n.includes("_v2_"));
+  const inFamily = (n, side) => hasV2
+      ? (n.startsWith(side) && n.includes("_v2_"))
+      : (n.startsWith(side) && !n.includes("_v2_"));
+  const fidModels = Object.entries(allModels).filter(([n])=>inFamily(n,"fidelity"))
+                          .sort((a,b)=>a[1].bpp - b[1].bpp);
+  const nznModels = Object.entries(allModels).filter(([n])=>inFamily(n,"neurozip"))
+                          .sort((a,b)=>a[1].bpp - b[1].bpp);
+  const tiers = Math.min(fidModels.length, nznModels.length);
+  console.log(`using ${hasV2 ? "v2 (ViT)" : "v1 (conv-only)"} codecs: ${tiers} tiers`);
+
+  // ---------- featured list (from precomputed assets) ----------
+  let featured = [];
+  try {
+    const summary = await fetch("/demo/assets/summary.json").then(r=>r.json());
+    featured = summary.featured || [];
+  } catch {}
+
+  const sel = document.getElementById("concept");
+  if (featured.length) {
+    const og = document.createElement("optgroup");
+    og.label = "featured (NeuroZip wins most)";
+    featured.forEach(i => {
+      const o = document.createElement("option");
+      o.value = i; o.textContent = concepts[i].replace(/_/g," ");
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  }
+  const og2 = document.createElement("optgroup");
+  og2.label = "all concepts (alphabetical)";
+  concepts.map((c,i)=>({c,i})).sort((a,b)=>a.c.localeCompare(b.c)).forEach(({c,i}) => {
+    const o = document.createElement("option");
+    o.value = i; o.textContent = c.replace(/_/g," ");
+    og2.appendChild(o);
+  });
+  sel.appendChild(og2);
+
+  // ---------- tier slider ----------
+  const tier = document.getElementById("tier");
+  tier.min = 0; tier.max = tiers-1; tier.value = Math.floor((tiers-1)/2);
+
+  // ---------- state ----------
+  let lastQuery = null;             // {text: ?, concept_idx: ?}
+  let lastResult = null;            // /api/retrieve response
+  let lastSelectedEpoch = null;     // epoch_idx currently in the reconstruction viewer
+  let lastModels = null;            // [fid_name, nzn_name] for current tier
+
+  function tierLabel(i) {
+    const labels = (tiers === 4)
+      ? ["very high compression","high compression","medium compression","low compression"]
+      : ["high compression","medium compression","low compression"];
+    return labels[i] || `tier ${i+1}`;
+  }
+  function modelsForTier() {
+    const t = +tier.value;
+    return { fid: fidModels[t][0], nzn: nznModels[t][0] };
+  }
+
+  // ---------- retrieval ----------
+  async function runRetrieve() {
+    const t = +tier.value;
+    const {fid, nzn} = modelsForTier();
+    lastModels = [fid, nzn];
+    const body = lastQuery.text != null
+      ? {text: lastQuery.text, models: [fid, nzn], k: 5}
+      : {concept_idx: lastQuery.concept_idx, models: [fid, nzn], k: 5};
+    document.getElementById("query-readout").innerHTML = `<span class="spinner"></span> querying…`;
+    const r = await fetch("/api/retrieve", {method:"POST", headers:{"content-type":"application/json"},
+                                            body: JSON.stringify(body)}).then(r=>r.json());
+    lastResult = r;
+    renderRetrieval(r, fid, nzn);
+    // Auto-load reconstruction for the gold concept if NeuroZip retrieved it, else top-1
+    const nzn_top = r.models[nzn].top_k_eeg_idx;
+    const gold = r.query.nearest_concept_idx;
+    const pick = nzn_top.includes(gold) ? gold : nzn_top[0];
+    loadReconstruction(pick);
+  }
+  function renderRetrieval(r, fidName, nznName) {
+    const gold = r.query.nearest_concept_idx;
+    const nzn = r.models[nznName], fid = r.models[fidName];
+    const goldName = r.query.nearest_concept.replace(/_/g," ");
+    const qStr = r.query.text
+      ? `query: <b>"${r.query.text}"</b> &nbsp;→&nbsp; nearest of 200 test concepts: <b>${goldName}</b> (CLIP cos ${r.query.nearest_concept_score.toFixed(3)})`
+      : `query concept: <b>${goldName}</b>`;
+    document.getElementById("query-readout").innerHTML = qStr +
+      ` &nbsp;•&nbsp; gold rank: <b style="color:var(--nzn)">${nzn.gold_rank+1}</b> (ours) ` +
+      `vs <b style="color:var(--fid)">${fid.gold_rank+1}</b> (fidelity)`;
+    const m = allModels;
+    document.getElementById("nzn-badge").textContent = `${m[nznName].bpp.toFixed(3)} bpp · ${m[nznName].ratio.toFixed(0)}×`;
+    document.getElementById("fid-badge").textContent = `${m[fidName].bpp.toFixed(3)} bpp · ${m[fidName].ratio.toFixed(0)}×`;
+    renderGT(document.getElementById("gt-nzn"), gold);
+    renderGT(document.getElementById("gt-fid"), gold);
+    renderCards(document.getElementById("grid-nzn"), nzn.top_k_eeg_idx, gold);
+    renderCards(document.getElementById("grid-fid"), fid.top_k_eeg_idx, gold);
+  }
+  function renderCards(grid, idxs, goldIdx) {
+    grid.innerHTML = "";
+    idxs.forEach((idx, rank) => {
+      const card = document.createElement("div");
+      card.className = "card" + (idx===goldIdx?" gold":"");
+      card.dataset.epoch = idx;
+      const img = document.createElement("img");
+      img.src = `/api/concept_image/${idx}`;
+      img.onerror = () => { img.style.opacity = .3; };
+      const lbl = document.createElement("div");
+      lbl.className = "lbl"; lbl.textContent = concepts[idx].replace(/_/g," ");
+      const rk = document.createElement("div");
+      rk.className = "rank"; rk.textContent = `#${rank+1}`;
+      card.append(img, rk, lbl);
+      card.addEventListener("click", () => loadReconstruction(idx));
+      grid.appendChild(card);
+    });
+  }
+  function renderGT(div, conceptIdx) {
+    div.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = `/api/concept_image/${conceptIdx}`;
+    const gt = document.createElement("div");
+    gt.className = "gt";
+    gt.innerHTML = `<strong>${concepts[conceptIdx].replace(/_/g," ")}</strong>
+      <span>ground-truth stimulus (the image the subject saw)</span>`;
+    div.appendChild(img); div.appendChild(gt);
+  }
+
+  // ---------- reconstruction viewer ----------
+  async function loadReconstruction(epoch_idx) {
+    lastSelectedEpoch = epoch_idx;
+    document.querySelectorAll(".card").forEach(c => c.classList.toggle("selected",
+        +c.dataset.epoch === epoch_idx));
+    document.getElementById("ep-num").textContent = `#${epoch_idx}`;
+    document.getElementById("ep-concept").textContent = concepts[epoch_idx].replace(/_/g," ");
+    document.getElementById("vh-status").innerHTML = `<span class="spinner"></span> rendering…`;
+    const {fid, nzn} = modelsForTier();
+    const r = await fetch("/api/reconstruct", {method:"POST",
+        headers:{"content-type":"application/json"},
+        body: JSON.stringify({epoch_idx, models:[nzn, fid],
+                              kinds:["heatmap","diff","waveforms","latent"]})
+    }).then(r=>r.json());
+    document.getElementById("fig-heatmap").src   = r.figs.heatmap;
+    document.getElementById("fig-diff").src      = r.figs.diff;
+    document.getElementById("fig-waveforms").src = r.figs.waveforms;
+    document.getElementById("fig-latent").src    = r.figs.latent;
+    document.getElementById("vh-nzn-bpp").textContent = r.info.models[nzn].bpp.toFixed(3);
+    document.getElementById("vh-nzn-mse").textContent = r.info.models[nzn].mse.toFixed(4);
+    document.getElementById("vh-fid-bpp").textContent = r.info.models[fid].bpp.toFixed(3);
+    document.getElementById("vh-fid-mse").textContent = r.info.models[fid].mse.toFixed(4);
+    document.getElementById("vh-status").innerHTML = "";
+  }
+
+  // ---------- aggregate figs (refresh when tier changes) ----------
+  async function loadAggregates() {
+    const {fid, nzn} = modelsForTier();
+    const r = await fetch("/api/aggregate_figs", {method:"POST",
+        headers:{"content-type":"application/json"},
+        body: JSON.stringify({models:[nzn, fid], kinds:["channel_mse","bit_hist"]})
+    }).then(r=>r.json());
+    document.getElementById("fig-channel-mse").src = r.figs.channel_mse;
+    document.getElementById("fig-bit-hist").src    = r.figs.bit_hist;
+  }
+
+  // ---------- bpp / metric sidebar (no live call needed; aggregates) ----------
+  function refreshSidebar() {
+    const {fid, nzn} = modelsForTier();
+    const M = allModels;
+    document.getElementById("tier-readout").textContent = tierLabel(+tier.value) +
+      "  (slide for more / less compression)";
+    document.getElementById("bpp-ours").textContent = M[nzn].bpp.toFixed(3);
+    document.getElementById("bpp-fid").textContent  = M[fid].bpp.toFixed(3);
+    document.getElementById("ratio-ours").textContent = M[nzn].ratio.toFixed(0)+"×";
+    document.getElementById("ratio-fid").textContent  = M[fid].ratio.toFixed(0)+"×";
+    document.getElementById("m-ours").textContent = fmt(M[nzn].img_top5);
+    document.getElementById("m-fid").textContent  = fmt(M[fid].img_top5);
+    const diff = (M[nzn].img_top5 - M[fid].img_top5) * 100;
+    const diffStr = (diff>=0?"+":"") + diff.toFixed(1) + " pp";
+    document.getElementById("m-detail").innerHTML =
+      `top-1: ${fmt(M[nzn].img_top1)} (ours) · ${fmt(M[fid].img_top1)} (fid) &nbsp;&nbsp;`+
+      `top-10: ${fmt(M[nzn].img_top10)} (ours) · ${fmt(M[fid].img_top10)} (fid)<br>`+
+      `gap @ top-5: <span class="${diff>=0?'diff-up':'diff-down'}">${diffStr}</span>`;
+    const hStr = (M[nzn].holdout_top1!=null)
+      ? `held-out classifier (circularity check): <b style="color:var(--nzn)">${fmt(M[nzn].holdout_top1)}</b> ours vs <b style="color:var(--fid)">${fmt(M[fid].holdout_top1)}</b> fidelity`
+      : "";
+    document.getElementById("m-holdout").innerHTML = hStr;
+  }
+
+  // ---------- listeners ----------
+  document.getElementById("go").addEventListener("click", () => {
+    const t = document.getElementById("text-query").value.trim();
+    if (!t) return;
+    lastQuery = {text:t}; runRetrieve();
+  });
+  document.getElementById("text-query").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("go").click();
+  });
+  document.getElementById("randomize").addEventListener("click", () => {
+    if (featured.length) {
+      const i = featured[Math.floor(Math.random()*featured.length)];
+      sel.value = i; lastQuery = {concept_idx:i}; runRetrieve();
+    }
+  });
+  sel.addEventListener("change", () => {
+    lastQuery = {concept_idx: +sel.value};
+    document.getElementById("text-query").value = "";
+    runRetrieve();
+  });
+  tier.addEventListener("input", () => {
+    refreshSidebar();
+    if (lastQuery) runRetrieve();
+    loadAggregates();
+  });
+
+  // ---------- initial render ----------
+  refreshSidebar();
+  // Default: query for "robot" via concept_idx
+  if (featured.length) {
+    sel.value = featured[0];
+    lastQuery = {concept_idx: featured[0]};
+  } else {
+    lastQuery = {concept_idx: 0};
+  }
+  await runRetrieve();
+  loadAggregates();
+
+})().catch(e => {
+  document.body.insertAdjacentHTML("beforeend",
+    `<div style="position:fixed;bottom:0;left:0;right:0;background:#b94747;color:#fff;
+     padding:14px 24px;font-family:monospace;font-size:13px;">
+     error: ${e.message || e}. Make sure <code>python serve.py --port 8011</code> is running.</div>`);
+  console.error(e);
+});
+</script>
+</body>
+</html>

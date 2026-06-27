@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neurozip"
-version = "0.2.0b1"
+version = "0.2.0b2"
 description = "Task-aware neural compression for brain/biomedical signals."
 readme = "README.md"
 requires-python = ">=3.9"

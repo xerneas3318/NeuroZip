@@ -60,6 +60,16 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _require_ml():
+    """Exit with a friendly message (not a traceback) if the ml extra is absent."""
+    import importlib.util
+    missing = [m for m in ("numpy", "torch")
+               if importlib.util.find_spec(m) is None]
+    if missing:
+        sys.exit("This command needs the ML extra and the models:\n"
+                 "  pip install 'neurozip[ml]'\n  neurozip download")
+
+
 def _load_input(args):
     import numpy as np
     from . import runtime as rt
@@ -77,6 +87,7 @@ def _load_input(args):
 
 
 def _cmd_compress(args) -> int:
+    _require_ml()
     import numpy as np
     from . import runtime as rt
     eeg, concept = _load_input(args)
@@ -91,6 +102,7 @@ def _cmd_compress(args) -> int:
 
 
 def _cmd_decompress(args) -> int:
+    _require_ml()
     import numpy as np
     from . import runtime as rt
     arc = rt.load_nz(args.input)
@@ -103,6 +115,7 @@ def _cmd_decompress(args) -> int:
 
 
 def _cmd_embed(args) -> int:
+    _require_ml()
     import numpy as np
     from . import runtime as rt
     eeg, concept = _load_input(args)
@@ -118,6 +131,7 @@ def _cmd_embed(args) -> int:
 
 
 def _cmd_sample(args) -> int:
+    _require_ml()
     import numpy as np
     from . import runtime as rt
     s = rt.load_samples()

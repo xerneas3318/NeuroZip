@@ -244,6 +244,15 @@
           <span id="comp-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b92a4;">awaiting file</span>
         </div>
 
+        <!-- Input EEG preview (visible after a file/example is loaded) -->
+        <div id="comp-input-preview" style="display:none;margin-top:13px;padding:10px;background:#fff;border:1px solid #e9ecf3;border-radius:9px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;">input EEG <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></span>
+            <span id="comp-input-preview-meta" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b92a4;">—</span>
+          </div>
+          <img id="comp-input-fig" class="fig-img" data-cap="input EEG (before compression)" alt="" style="height:170px;"/>
+        </div>
+
         <div id="comp-result" style="display:none;margin-top:13px;padding:12px 13px;background:#fff;border:1px solid #e9ecf3;border-radius:9px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <span id="comp-out-name" style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#161a22;">—</span>
@@ -256,6 +265,10 @@
             <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">mse</div><div id="comp-out-mse" style="font-size:14px;font-weight:600;color:#4b5263;">—</div></div>
           </div>
           <div id="comp-out-tail" style="font-size:11px;color:#9aa1b2;margin-top:9px;font-family:'IBM Plex Mono',monospace;">—</div>
+          <div style="margin-top:11px;padding-top:11px;border-top:1px solid #eceff5;">
+            <div style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">reconstruction <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+            <img id="comp-recon-fig" class="fig-img" data-cap="codec reconstruction (after compress → decompress)" alt="" style="height:170px;"/>
+          </div>
         </div>
       </div>
 
@@ -296,6 +309,10 @@
             <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">dtype</div><div style="font-size:14px;font-weight:600;color:#4b5263;">float16</div></div>
           </div>
           <div id="dec-out-tail" style="font-size:11px;color:#9aa1b2;margin-top:9px;font-family:'IBM Plex Mono',monospace;">decoded · z-norm reversed with stored channel stats</div>
+          <div style="margin-top:11px;padding-top:11px;border-top:1px solid #eceff5;">
+            <div style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">decoded EEG <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+            <img id="dec-out-fig" class="fig-img" data-cap="decompressed EEG" alt="" style="height:170px;"/>
+          </div>
         </div>
       </div>
     </div>
@@ -460,9 +477,16 @@
     // Defer src clear so the close transition runs first.
     setTimeout(() => { if (!lb.classList.contains("open")) lbImg.src = ""; }, 200);
   }
-  for (const img of document.querySelectorAll(".fig-img")) {
-    img.addEventListener("click", () => openLightbox(img.src, img.dataset.cap || ""));
+  // Bind once-per-image click → lightbox. Re-callable so dynamically-added
+  // figures (workspace previews) pick it up too.
+  function bindLightbox(root = document) {
+    for (const img of root.querySelectorAll(".fig-img")) {
+      if (img.dataset.lbBound) continue;
+      img.dataset.lbBound = "1";
+      img.addEventListener("click", () => { if (img.src) openLightbox(img.src, img.dataset.cap || ""); });
+    }
   }
+  bindLightbox();
   // Click background OR the close button to dismiss; ignore clicks on the img itself.
   lb.addEventListener("click", e => { if (e.target === lb) closeLightbox(); });
   lbClose.addEventListener("click", closeLightbox);
@@ -693,6 +717,26 @@
     document.getElementById("comp-btn").style.opacity = (compEpochIdx != null || compUploadedB64) ? "1" : ".5";
     document.getElementById("comp-status").textContent = (compEpochIdx != null || compUploadedB64) ? "ready" : "awaiting file";
   }
+  // Render the loaded input EEG into the preview slot (called whenever
+  // compEpochIdx or compUploadedB64 changes to something non-null).
+  async function previewCompInput(metaText) {
+    const wrap = document.getElementById("comp-input-preview");
+    const img  = document.getElementById("comp-input-fig");
+    const body = compEpochIdx != null ? {epoch_idx: compEpochIdx, title: "input EEG"}
+                                       : {bytes_b64: compUploadedB64, title: "input EEG (uploaded)"};
+    document.getElementById("comp-input-preview-meta").textContent = metaText || "rendering…";
+    wrap.style.display = "block";
+    img.src = "";
+    try {
+      const r = await fetch("/api/visualize_eeg", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)}).then(r => r.json());
+      img.src = r.fig;
+      img.dataset.cap = "input EEG (before compression)";
+      bindLightbox();
+      document.getElementById("comp-input-preview-meta").textContent = metaText || "loaded";
+    } catch (e) {
+      document.getElementById("comp-input-preview-meta").textContent = "render failed";
+    }
+  }
 
   // Selecting a demo example fetches the real .npy from the server and loads
   // it as if the user had uploaded it. That way the workspace is genuinely
@@ -716,6 +760,7 @@
       compUploadedB64 = await blobToB64(blob);
       setCompFileLabel(`${concept}_idx${idx}.npy`, fmtBytes(blob.size) + " · loaded from /api/demo_epoch");
       document.getElementById("comp-file-input").value = "";
+      previewCompInput(`${concept} · epoch #${idx} · ${fmtBytes(blob.size)}`);
     } catch (err) {
       setCompFileLabel("load failed", err.message || String(err));
     }
@@ -733,6 +778,7 @@
     compEpochIdx = null;
     compUploadedB64 = await blobToB64(f);
     setCompFileLabel(f.name, fmtBytes(f.size) + " · uploaded");
+    previewCompInput(f.name + " · " + fmtBytes(f.size));
   });
   const cd = document.getElementById("comp-drop");
   cd.addEventListener("dragover", e => e.preventDefault());
@@ -742,6 +788,7 @@
     compEpochIdx = null;
     compUploadedB64 = await blobToB64(f);
     setCompFileLabel(f.name, fmtBytes(f.size) + " · dropped");
+    previewCompInput(f.name + " · " + fmtBytes(f.size));
   });
   document.getElementById("comp-variant").addEventListener("change", e => {
     document.getElementById("model-tag").textContent = variantTierToModel(e.target.value, +document.getElementById("comp-tier").value);
@@ -778,6 +825,22 @@
         `(${realRatio.toFixed(1)}× actual). entropy floor: ${(r.bpp*15750/8).toFixed(0)} B (${r.ratio.toFixed(0)}× ideal). ` +
         `latent ${r.latent_shape.join("×")} · ${r.latent_unique_values} unique symbols. ` +
         `the .nz wrapper bundles model id + norm stats for self-decoding.`;
+      // Server returned both input + reconstruction figs — show recon in
+      // result block; refresh input preview too in case it wasn't shown yet.
+      if (r.recon_fig) {
+        const rf = document.getElementById("comp-recon-fig");
+        rf.src = r.recon_fig;
+        rf.dataset.cap = `codec reconstruction · ${model} · MSE ${r.mse.toFixed(4)}`;
+        bindLightbox();
+      }
+      if (r.input_fig) {
+        const inp = document.getElementById("comp-input-fig");
+        inp.src = r.input_fig;
+        inp.dataset.cap = "input EEG (before compression)";
+        document.getElementById("comp-input-preview").style.display = "block";
+        document.getElementById("comp-input-preview-meta").textContent = r.source || "—";
+        bindLightbox();
+      }
       document.getElementById("comp-status").textContent = "✓ compressed";
       // pre-load decompress with the result so the user can roundtrip
       decUploadedB64 = r.bytes_b64;
@@ -858,6 +921,11 @@
       document.getElementById("dec-out-bytes").textContent = fmtBytes(r.size_bytes);
       document.getElementById("dec-out-shape").textContent = r.shape.join(" × ");
       document.getElementById("dec-out-tail").textContent = `decoded by ${r.model} · z-norm reversed with stored channel stats`;
+      if (r.fig) {
+        const f = document.getElementById("dec-out-fig");
+        f.src = r.fig; f.dataset.cap = `decompressed EEG · ${r.model}`;
+        bindLightbox();
+      }
       document.getElementById("dec-status").textContent = "✓ reconstructed";
     } catch (e) {
       document.getElementById("dec-status").innerHTML = `<span style="color:#b23b34">error: ${e.message}</span>`;

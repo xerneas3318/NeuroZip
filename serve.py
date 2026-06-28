@@ -408,6 +408,45 @@ def models():
     return jsonify(out)
 
 
+@app.get("/api/baseline")
+def baseline():
+    """Reference numbers for contextualizing the codecs' retrieval scores.
+
+    - chance: random retrieval (k/200)
+    - raw_eeg: top-k from the frozen projector on uncompressed trial-averaged EEG.
+              This is OUR ceiling — no codec can do better than this on the
+              same retrieval metric, since every codec's output is decoded
+              through the same projector.
+    - sota: best published top-5 on this exact protocol (THINGS-EEG, 200-way,
+            trial-averaged), as a reference for what a bigger judge / longer
+            training / multi-subject would buy.
+    """
+    scores_path = CHECKPOINTS / "scores.json"
+    scores = json.loads(scores_path.read_text()) if scores_path.exists() else {}
+    raw = {}
+    if scores:
+        # Every codec records the same retrieval_raw_image (same projector + EEG).
+        any_codec = next(iter(scores.values()))
+        raw = any_codec.get("retrieval_raw_image", {})
+    return jsonify({
+        "chance":  {"top1": 1/200, "top5": 5/200, "top10": 10/200},
+        "raw_eeg": {
+            "top1":  raw.get("top1"),
+            "top5":  raw.get("top5"),
+            "top10": raw.get("top10"),
+            "label": "frozen projector P on uncompressed trial-averaged EEG (our ceiling)",
+        },
+        "sota": {
+            "top1":  0.34,
+            "top5":  0.65,
+            "top10": 0.79,
+            "label": "approx. SOTA on THINGS-EEG 200-way trial-averaged (NICE / Wu et al. CVPR 2025; multi-subject, ~10-30M-param projector, 100+ epochs)",
+        },
+        "n_concepts": 200,
+        "raw_fp16_bpp": 16.0,
+    })
+
+
 @app.get("/api/concepts")
 def concepts():
     return jsonify({"concepts": State.concept_list,

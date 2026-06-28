@@ -118,6 +118,7 @@ def index():
    <table id=info><thead><tr><th>model</th><th>MSE</th><th>bpp</th></tr></thead><tbody></tbody></table></div>
  <div class=card><h3 id=heat-h>actual vs reconstructions (normalized σ)</h3><img id=heat></div>
 </div>
+<div class=card><h3>RQ-VAE overlaid on original · difference (original − RQ-VAE)</h3><img id=overlay></div>
 <div class=card><h3>RQ-VAE discrete latent codes · per-channel waveforms (actual vs models)</h3><img id=detail></div>
 <p class=note>Slide the compression tier to swap codecs. Per-image MSE is computed live.
 v4 (rian) = conv-only codec trained on single trials; it over-shoots amplitude on
@@ -139,6 +140,7 @@ async function info(i,ti){{const d=await (await fetch('/api/info?idx='+i+'&tier=
  document.getElementById('heat-h').textContent='actual · '+Object.keys(d.models).join(' · ')+' (per-image MSE on each)';}}
 function upd(){{const i=document.getElementById('sel').value,ti=document.getElementById('tier').value,t=Date.now();
  document.getElementById('heat').src=`/api/heat?idx=${{i}}&tier=${{ti}}&t=${{t}}`;
+ document.getElementById('overlay').src=`/api/overlay?idx=${{i}}&tier=${{ti}}&t=${{t}}`;
  document.getElementById('detail').src=`/api/detail?idx=${{i}}&tier=${{ti}}&t=${{t}}`;
  document.getElementById('stim').src='/api/stimulus?idx='+i+'&t='+t;
  document.getElementById('stimcap').textContent=document.getElementById('sel').selectedOptions[0].textContent.split('— ')[1];
@@ -177,6 +179,37 @@ def heat():
     for a, (t, arr) in zip(np.atleast_1d(ax), panels):
         a.imshow(arr, aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax, extent=ext)
         a.set_title(t, fontsize=10); a.set_xlabel("time after stim (ms)"); a.set_ylabel("channel")
+    return _png(fig)
+
+
+@app.route("/api/overlay")
+def overlay():
+    i = int(request.args.get("idx", 0)); ti = int(request.args.get("tier", len(S["tiers"]) - 1))
+    x = S["te"][i:i+1]; xo = x[0].cpu().numpy()
+    rq = tier(ti)[1].get("RQ-VAE") or next(iter(tier(ti)[1].values()))
+    xr = recon(rq, x)[0].cpu().numpy()
+    diff = xo - xr; mse = float((diff ** 2).mean())
+    t = np.linspace(-200, 996, N_TIMES)
+    fig, ax = plt.subplots(1, 2, figsize=(12, 4.4), gridspec_kw={"width_ratios": [1.45, 1.3], "wspace": 0.18})
+    # stacked per-channel overlay: original (gray) with RQ-VAE (red) on top
+    chans = np.linspace(0, xo.shape[0] - 1, 12).astype(int)
+    step = 3.2
+    for k, ch in enumerate(chans):
+        base = -k * step
+        ax[0].plot(t, xo[ch] + base, color="0.55", lw=1.0)
+        ax[0].plot(t, xr[ch] + base, color="#d62728", lw=1.0, alpha=0.85)
+        ax[0].text(-215, base, f"ch{ch}", fontsize=7, ha="right", va="center", color="0.5")
+    ax[0].plot([], [], color="0.55", label="original")
+    ax[0].plot([], [], color="#d62728", label="RQ-VAE")
+    ax[0].axvline(0, color="0.8", lw=.7); ax[0].set_yticks([]); ax[0].legend(loc="upper right", fontsize=9)
+    ax[0].set_title(f"RQ-VAE overlaid on original — {S['concepts'][i]}", fontsize=11)
+    ax[0].set_xlabel("time after stim (ms)")
+    # difference heatmap
+    dm = float(np.abs(diff).max()) or 1.0
+    im = ax[1].imshow(diff, aspect="auto", cmap="seismic", vmin=-dm, vmax=dm, extent=[-200, 996, 63, 0])
+    ax[1].set_title(f"difference (original − RQ-VAE)   MSE={mse:.4f}", fontsize=11)
+    ax[1].set_xlabel("time after stim (ms)"); ax[1].set_ylabel("channel")
+    fig.colorbar(im, ax=ax[1], fraction=0.046, pad=0.02, label="residual (σ)")
     return _png(fig)
 
 

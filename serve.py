@@ -353,9 +353,14 @@ def _ensure_state():
 
 
 def _root_html() -> str:
-    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean."""
+    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean|dc|dark."""
     home = os.environ.get("NEUROZIP_HOME", "dark").lower()
-    return "demo_clean.html" if home == "clean" else "demo.html"
+    return {
+        "clean": "demo_clean.html",
+        "dc":    "NeuroZip.dc.html",
+        "v2":    "NeuroZip.dc.html",
+        "dark":  "demo.html",
+    }.get(home, "demo.html")
 
 
 @app.get("/")
@@ -367,6 +372,12 @@ def index():
 def index_clean():
     """White-theme alternative to demo.html — same API, different shell."""
     return send_file(ROOT / "demo_clean.html")
+
+
+@app.get("/dc")
+def index_dc():
+    """v2 design: ported NeuroZip.dc.html with codec workspace."""
+    return send_file(ROOT / "NeuroZip.dc.html")
 
 
 @app.get("/dark")
@@ -534,6 +545,151 @@ def reconstruct_endpoint():
                               "mse": mse,
                               "compression_ratio_vs_fp16": 16.0 / max(c.bpp_floor(bits), 1e-6)}
     return jsonify({"info": info, "figs": figs})
+
+
+# ============================================================================
+# Codec workspace endpoints (NeuroZip.dc.html "Compress / Decompress" panes)
+# ============================================================================
+
+def _serialize_compressed(model_name: str, latent_int: np.ndarray) -> bytes:
+    """Tiny custom-format .nz file: a single .npz containing the integer
+    latent, the model name, and the per-channel norm stats (so the
+    decompressor doesn't need an out-of-band lookup)."""
+    bio = io.BytesIO()
+    np.savez_compressed(
+        bio,
+        model=np.array(model_name, dtype=str),
+        latent=latent_int.astype(np.int16),
+        norm_mean=State.norm_mean.numpy().astype(np.float32),
+        norm_std=State.norm_std.numpy().astype(np.float32),
+    )
+    return bio.getvalue()
+
+
+def _deserialize_compressed(blob: bytes) -> dict:
+    with np.load(io.BytesIO(blob), allow_pickle=False) as z:
+        return {
+            "model": str(z["model"]),
+            "latent": z["latent"].astype(np.int32),
+            "norm_mean": z["norm_mean"].astype(np.float32),
+            "norm_std": z["norm_std"].astype(np.float32),
+        }
+
+
+def _decode_input_eeg(body: dict) -> tuple[np.ndarray, str]:
+    """Frontend gives us EITHER an epoch_idx (use the loaded test set) OR
+    a base64-encoded raw payload — try .npy first, fall back to raw float
+    bytes. Returns (eeg_array_63x250_float32, source_label)."""
+    if body.get("epoch_idx") is not None:
+        idx = int(body["epoch_idx"])
+        # Inverse-normalize back to "real" EEG units so the workspace
+        # mirrors what an external caller would actually feed in.
+        x = State.eeg_avg[idx].numpy()
+        x_real = x * State.norm_std.numpy()[:, None] + State.norm_mean.numpy()[:, None]
+        return x_real.astype(np.float32), f"test epoch #{idx}"
+    blob = base64.b64decode(body["bytes_b64"])
+    # Try parsing as .npy (the standard EEG epoch format).
+    try:
+        arr = np.load(io.BytesIO(blob), allow_pickle=False)
+    except Exception:
+        # Fall back to a raw float32 buffer
+        arr = np.frombuffer(blob, dtype=np.float32)
+    arr = arr.reshape(N_CHANNELS, N_TIMES).astype(np.float32)
+    return arr, "uploaded file"
+
+
+@app.post("/api/compress")
+def api_compress():
+    """Compress an EEG epoch through one of the trained codecs.
+
+    Request: {"epoch_idx": int}  OR  {"bytes_b64": <base64 of .npy or raw>,
+                                      "model": "neurozip_v4_high"}
+    Returns: codec stats + base64-encoded .nz blob for download.
+    """
+    body = request.get_json(force=True)
+    eeg, source = _decode_input_eeg(body)
+    model_name = body.get("model", "neurozip_v4_high")
+    if model_name not in State.codecs:
+        return jsonify(error=f"unknown model {model_name}"), 400
+
+    # Normalize → encode → quantize → bits → roundtrip MSE.
+    eeg_n = (eeg - State.norm_mean.numpy()[:, None]) / State.norm_std.numpy()[:, None]
+    x = torch.from_numpy(eeg_n).unsqueeze(0).to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        y = codec.encoder(x)
+        y_int = torch.round(y)
+        bits = codec.prior.bits(y_int).item()
+        xh_n = codec.decoder(y_int).cpu().squeeze(0).numpy()
+    mse_norm = float(((eeg_n - xh_n) ** 2).mean())
+
+    latent = y_int.cpu().squeeze(0).int().numpy()
+    blob = _serialize_compressed(model_name, latent)
+    bpp = codec.bpp_floor(bits)
+
+    return jsonify({
+        "filename": f"epoch.{model_name}.nz",
+        "size_bytes": len(blob),
+        "raw_fp16_bytes": N_CHANNELS * N_TIMES * 2,
+        "bpp": bpp,
+        "bits_per_symbol": bits,
+        "ratio": 16.0 / max(bpp, 1e-9),
+        "mse": mse_norm,
+        "latent_shape": list(latent.shape),
+        "latent_unique_values": int(np.unique(latent).size),
+        "source": source,
+        "bytes_b64": base64.b64encode(blob).decode(),
+    })
+
+
+@app.post("/api/decompress")
+def api_decompress():
+    """Decompress a .nz blob back into a 63x250 EEG epoch.
+
+    Request: {"bytes_b64": <base64 of .nz file>}
+    Returns: shape + reconstructed EEG as .npy bytes (base64) for download.
+    """
+    body = request.get_json(force=True)
+    blob = base64.b64decode(body["bytes_b64"])
+    payload = _deserialize_compressed(blob)
+    model_name = payload["model"]
+    if model_name not in State.codecs:
+        return jsonify(error=f"compressed blob asks for model '{model_name}' which isn't loaded"), 400
+
+    y = torch.from_numpy(payload["latent"]).float().unsqueeze(0).to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        xh_n = codec.decoder(y).cpu().squeeze(0).numpy()
+    # Inverse-normalize back to real EEG units.
+    xh = xh_n * payload["norm_std"][:, None] + payload["norm_mean"][:, None]
+
+    bio = io.BytesIO()
+    np.save(bio, xh.astype(np.float16), allow_pickle=False)
+    npy_bytes = bio.getvalue()
+
+    return jsonify({
+        "filename": f"epoch.recon.npy",
+        "size_bytes": len(npy_bytes),
+        "shape": list(xh.shape),
+        "model": model_name,
+        "bytes_b64": base64.b64encode(npy_bytes).decode(),
+    })
+
+
+@app.get("/api/demo_epoch/<int:idx>")
+def api_demo_epoch(idx):
+    """Stream a real EEG epoch from the test set as a .npy file. Lets the
+    workspace's 'demo epoch' dropdown actually feed a real array to /api/compress."""
+    if not (0 <= idx < State.eeg_avg.size(0)):
+        return abort(404)
+    x = State.eeg_avg[idx].numpy()
+    x_real = x * State.norm_std.numpy()[:, None] + State.norm_mean.numpy()[:, None]
+    bio = io.BytesIO()
+    np.save(bio, x_real.astype(np.float16), allow_pickle=False)
+    bio.seek(0)
+    concept = State.concept_list[idx]
+    return send_file(bio, mimetype="application/octet-stream",
+                     as_attachment=True, download_name=f"{concept}_idx{idx}.npy")
 
 
 @app.post("/api/aggregate_figs")

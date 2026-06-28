@@ -1,20 +1,56 @@
 # NeuroZip — task-aware EEG compression
 
-Same-day hackathon project. **NeuroZip** is a neural EEG compressor trained to
-preserve what the EEG is *about* (the image embedding it represents) rather
-than pure waveform fidelity. The result: after aggressive compression you can
-still text-search the EEG corpus ("accordion" → retrieve the epochs recorded
-while the subject saw an accordion), while a fidelity-only codec at the same
-compression ratio loses retrievability.
+> **Type a word → find the brain recording.**
+> A neural EEG codec trained so that *what survives compression* is the
+> CLIP-decodable semantic content of the EEG — making the compressed corpus
+> text-searchable.
 
-> **One-sentence pitch.** The same frozen model that decides what to throw
-> away during compression is what lets you text-search what you kept.
+## TL;DR — what compression revealed about the brain
+
+Object identity in single-subject EEG is **spatially + temporally
+localized**, and it survives **144× compression** with **100%
+concept-identification accuracy** on an independent classifier — trained
+on a different EEG split, with a different loss, that our codec was
+never optimized against.
+
+NeuroZip's task loss concentrates preservation exactly where the visual
+system encodes object identity:
+
+- **WHERE.** Visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
+  **32% tighter** under NeuroZip than under a fidelity-only codec at
+  matched architecture — vs only **7%** tighter on non-visual channels.
+  A **4.7× spatial preference**.
+- **WHEN.** Visual-evoked ERP windows reconstruct **12–25% tighter**.
+  N170 (the face/object-recognition component, 150–200 ms post-stimulus):
+  NeuroZip MSE is **25.4% below** fidelity. P200 (17.8%), P100 (12.6%),
+  and P300 (12.1%) all favored too.
+- **HOW MUCH SURVIVES.** A separate concept classifier — different data,
+  different loss, different output head — hits **100% top-1** on
+  NeuroZip-decompressed EEG at 144× compression. The information needed
+  to identify what someone looked at is *low-dimensional* and *retrievable
+  from a tiny fraction of the original signal*.
+
+Reading these as a single claim: *compression as a microscope*. We
+crushed the EEG until only what a downstream task cares about could
+survive — and what survived re-discovered, unsupervised, the
+neurophysiology of object recognition.
+
+Numerical evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
+[`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json),
+[`results.md`](results.md).
+
+> **One-sentence engineering pitch.** The same frozen model that decides
+> what to throw away during compression is what lets you text-search
+> what you kept.
 
 > **Where do I go next?**
-> - This README: install, run, the numbers, the file map.
-> - [`ARCHITECTURE.md`](ARCHITECTURE.md): the *why* — design rationale, the
->   v1 → v4 evolution, the three easy-to-get-wrong spots in detail, the
->   CLIP-variant gotcha, and the circularity defense.
+> - This README: install, run, file map, the numbers — biology first,
+>   then the engineering result.
+> - [`pitch.md`](pitch.md): the 3-minute stage script + Q&A prep.
+> - [`ARCHITECTURE.md`](ARCHITECTURE.md): the *why* — design rationale,
+>   the v1 → v4 evolution, the three easy-to-get-wrong spots in detail,
+>   the CLIP-variant gotcha, and the circularity defense.
+> - [`results.md`](results.md): the full per-tier numerical breakdown.
 > - Inline docstrings in each module explain how individual pieces work.
 
 ## How it works

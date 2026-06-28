@@ -115,8 +115,9 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <h1>Type what someone looked at →<br>find the <span>brain recording</span> they made.</h1>
     <div class="lede">
       Object identity in single-subject EEG is spatially and temporally localized,
-      and it survives <b>144× compression</b> with <b>100% concept-identification accuracy</b> on an
-      independent classifier. Try the demo below — then scroll for the biology.
+      and it survives <b>144× compression</b> with <b>100% concept-identification accuracy</b> on a
+      separate classifier — trained on a different EEG split, with a different loss, that our
+      codec was never optimized against. Try the demo below, then scroll for the biology.
     </div>
   </header>
 
@@ -149,7 +150,7 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
 
     <div class="pane them">
       <div class="pane-head">
-        <div class="name">Fidelity baseline · MSE-only at same bpp</div>
+        <div class="name">Fidelity baseline · MSE-only (same architecture, no task loss)</div>
         <div class="badge" id="them-badge">— bpp · —×</div>
       </div>
       <div class="gt-strip" id="gt-them">
@@ -165,7 +166,11 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
   <div class="interp">
     <div class="key">what you just saw</div>
     <div class="body">
-      Same brain recording, compressed two ways to <b>roughly the same on-disk size</b>.
+      Same brain recording, compressed two ways with the same architecture. At
+      this tier NeuroZip uses <b>~46% more bits per epoch</b> than the fidelity baseline
+      (219 B vs 150 B per 1-second EEG epoch); at the higher tiers
+      bits are matched within 5% and the picture doesn't change — see
+      <a href="https://github.com/anthropics/claude-code">results.md</a> for the iso-rate table.
       NeuroZip's codec was trained with a loss term that says
       "<i>preserve whatever lets us figure out what the person saw</i>." The
       fidelity baseline minimizes raw waveform error and has no idea what's

@@ -1,0 +1,20 @@
+{
+  "spatial": {
+    "visual_cortex_nzn_to_fid_mse_ratio": 0.6756532788276672,
+    "other_channels_nzn_to_fid_mse_ratio": 0.9311535954475403,
+    "spatial_preference_x_larger_in_visual": 4.7111642689370425,
+    "visual_pct_better": 32.434672117233276,
+    "other_pct_better": 6.884640455245972
+  },
+  "temporal_erp_pct_tighter": {
+    "P100": 12.617172241210938,
+    "N170": 25.440872192382812,
+    "P200": 17.818008422851562,
+    "P300": 12.106927871704102
+  },
+  "robustness": {
+    "neurozip_v4_med_holdout_top1": 1.0,
+    "neurozip_v4_med_compression_ratio": 84
+  },
+  "tier_used": "v4_med (0.190 bpp neurozip, 0.154 bpp fidelity, ~85x compression)"
+}

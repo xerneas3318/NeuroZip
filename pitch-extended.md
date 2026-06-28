@@ -218,32 +218,6 @@ earns its place by being real.)*
 
 ---
 
-## Slide 6 — where we're weak (and why we still trust it)
-
-We'd rather hand you the weaknesses than have you find them.
-
-- **One person.** We trained and tested on a single subject. The code can
-  switch subjects with one setting; we just didn't run all ten, because we
-  wanted to test one idea cleanly (does the meaning-rule help?) without mixing
-  in "do different brains behave differently?"
-- **Averaged trials.** Each concept was shown ~80 times and we averaged those
-  repeats to cut the noise. Single-shot brain reading is much harder and we do
-  **not** claim to solve it. We average because that's the standard way this
-  dataset is scored, so our numbers can be compared to published work.
-- **Modest absolute numbers.** 29% top-5, against a 45% ceiling. We lead with
-  the per-bit improvement over the baseline because that's the honest,
-  defensible claim.
-- **A counter-cut in our own data.** There's a second way to measure how
-  localized the signal is, and by that measure the normal codec looks more
-  concentrated than ours (it leans heavily on one electrode, "P8," worth ~12
-  points; ours leans on no single electrode more than ~3). We raise this
-  ourselves, because the two measurements answer different questions and a
-  judge who digs will find it. Better that we hand it over.
-
-Everything we *do* claim, we claim because we tried to break it and couldn't.
-
----
-
 ## Slide 7 — the close
 
 NeuroZip makes brain datasets **roughly 144× smaller** while keeping them

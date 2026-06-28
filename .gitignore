@@ -33,3 +33,6 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# protein data (regenerable via protein_data.py)
+data_protein/

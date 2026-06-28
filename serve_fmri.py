@@ -44,7 +44,12 @@ h1{margin:0;font-size:1.7em;letter-spacing:-.5px}h1 span{color:var(--accent)}.su
 def load_codec(ckpt, device):
     ck = torch.load(ckpt, weights_only=False, map_location=device)
     c = ck["config"]
-    m = fMRICodec(n_roi=c["n_roi"], c_lat=c["c_lat"], hidden=c["hidden"], n_attn=c["n_attn"], n_down=c.get("n_down", 3)).to(device)
+    if c.get("arch") == "heavy":
+        from fmri_codec_v5 import HeavyfMRICodec
+        m = HeavyfMRICodec(n_roi=c["n_roi"], c_lat=c["c_lat"], hidden=c["hidden"],
+                           depth=c.get("depth", 3), n_attn=c["n_attn"], n_down=c.get("n_down", 2)).to(device)
+    else:
+        m = fMRICodec(n_roi=c["n_roi"], c_lat=c["c_lat"], hidden=c["hidden"], n_attn=c["n_attn"], n_down=c.get("n_down", 3)).to(device)
     m.load_state_dict(ck["model"]); m.eval()
     return m, ck
 

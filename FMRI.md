@@ -14,26 +14,34 @@ downloads the per-subject `.1D` files (T TRs × 200 ROIs) and splits each into
 overlapping 64-TR windows → `(200, 64)` epochs, per-ROI z-scored. ~800 subjects →
 ~3,900 windows.
 
-## Result (held-out; spikes winsorized ±6σ, band-limited target, 2× temporal)
+## Result — constant compression (original-v4 latent budget), MSE driven down
+
+Headline holds the compression at the **original v4 budget** (1024 latent symbols,
+~83×) and gets the MSE down by improving the *architecture/data*, not the bitrate:
 
 | metric | value |
 |---|---|
-| reconstruction MSE | **0.099** (started at 0.50) |
-| variance explained | **79%** (started at 51%) |
-| compression vs float16 | **8×** |
+| reconstruction MSE | **0.155** (started at 0.46 at this same compression) |
+| variance explained | **68%** |
+| compression vs float16 | **83×** (= original v4) |
+| codec | `HeavyfMRICodec` — 14M params, residual + attention |
 
-Latent budget trades compression for MSE directly — pick the operating point:
+### What moved the MSE at *constant* compression (1024 symbols)
 
-| c_lat | MSE | variance | compression |
-|---|---|---|---|
-| 128 | 0.163 | 65% | 58× |
-| 256 | 0.121 | 74% | 11× |
-| **384** | **0.099** | **79%** | **8×** |
-| 512 (overcomplete) | 0.094 | 80% | 6× |
+| change | MSE |
+|---|---|
+| original v4 (128×8, no denoise) | 0.46 |
+| + band-limit target (smooth σ=1.5) | 0.21 |
+| + smarter latent split (64×16, keeps temporal) | 0.169 |
+| + full dataset (1034 subjects) | 0.160 |
+| **+ heavier net (14M, residual+attention)** | **0.155** |
 
-MSE flattens at ~0.09 / 80% even with an over-complete latent — that residual is
-the irreducible noise. Headline is c_lat=384 (sub-0.1 MSE, still 8×); use c_lat=128
-for the high-compression 58× point.
+The heavier architecture helps only **marginally** (0.160 → 0.155) — and a 33M
+version *overfits* (0.212). So at this compression the model is **data/rate-limited,
+not capacity-limited**: a conv v4 is already near-optimal for the bitrate, and the
+real wins were denoising the target + a smarter latent split + more data. To go
+materially lower you must spend bits (`fmri_codec_v5.py` / big-c_lat reach ~0.10 at
+8×) or change the signal (coarser atlas / task fMRI).
 
 ## Why the MSE started high — and what actually fixed it
 
@@ -88,13 +96,13 @@ How well the *same* v4 codec compresses is a direct readout of signal redundancy
 |---|---|---|---|
 | ECG | 12 × 250 | 96% | 31× (periodic) |
 | EEG | 63 × 250 | 66% | 70× |
-| **fMRI** | **200 × 64** | **79%** | **8×** (or 65% @ 58×) |
+| **fMRI** | **200 × 64** | **68%** | **83×** (constant; heavier net) |
 | protein seq | 20 × 250 | — | ~1× (max-entropy) |
 
 ## Run
 
 ```bash
 python fmri_data.py                                # download ABIDE + build cache
-python train_fmri.py --epochs 120 --c-lat 384 --hidden 256 --lambda-rate 0.0005 --smooth 1.5 --n-down 1
+python train_fmri.py --epochs 160 --arch heavy --c-lat 64 --hidden 160 --depth 2 --n-attn 2 --n-down 2 --lambda-rate 0.005 --smooth 1.5 --wd 1e-4
 ./serve_fmri.sh        # demo on http://localhost:8011/
 ```

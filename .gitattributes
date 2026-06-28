@@ -1,0 +1,27 @@
+# Keep the brew release tarball (git archive) limited to the packaged CLI.
+# The EEG research codebase lives in the repo but is NOT part of the
+# installable `neurozip` package, so it is excluded from `git archive`.
+#
+# Leading slash anchors each pattern to the repo root so they do NOT also
+# match same-named files inside the package (e.g. neurozip/models/codec.py,
+# scripts/run_all.sh, ui/demo.html must stay in the tarball).
+/README.research.md   export-ignore
+/codec.py             export-ignore
+/clip_proj.py         export-ignore
+/data.py              export-ignore
+/evaluate.py          export-ignore
+/serve.py             export-ignore
+/train.py             export-ignore
+/run_all.sh           export-ignore
+/serve.sh             export-ignore
+/serve_clean.sh       export-ignore
+/train.sh             export-ignore
+/demo.html            export-ignore
+/demo_clean.html      export-ignore
+/demo/                export-ignore
+/scripts/download_data.sh    export-ignore
+/scripts/train_sweep.sh      export-ignore
+/scripts/train_sweep_v2.sh   export-ignore
+/scripts/train_sweep_v3.sh   export-ignore
+/scripts/train_sweep_v4.sh   export-ignore
+/scripts/train_v3_chain.sh   export-ignore

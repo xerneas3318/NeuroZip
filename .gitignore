@@ -33,3 +33,7 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# generated artifacts (regenerable)
+artifacts/
+results/stimuli/

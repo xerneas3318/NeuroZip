@@ -95,6 +95,6 @@ How well the *same* v4 codec compresses is a direct readout of signal redundancy
 
 ```bash
 python fmri_data.py                                # download ABIDE + build cache
-python train_fmri.py --epochs 100 --c-lat 128 --hidden 192 --lambda-rate 0.01 --smooth 1.5 --n-down 2
+python train_fmri.py --epochs 120 --c-lat 384 --hidden 256 --lambda-rate 0.0005 --smooth 1.5 --n-down 1
 ./serve_fmri.sh        # demo on http://localhost:8011/
 ```

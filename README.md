@@ -38,6 +38,10 @@ NeuroZip is a task-aware neural codec for single-trial EEG. The codec is trained
 
 Two results follow on THINGS-EEG (subject `sub-01`). First, the compressed corpus remains searchable by natural language: a free-text query returns the epochs recorded while the subject viewed the corresponding object, although the model is never trained on text. At matched bitrate the task-aware codec improves top-5 image-prompt retrieval by 4 to 11 percentage points over the fidelity baseline, at a cost of at most 5 percent in reconstruction MSE. Second, because the objective retains only stimulus-decodable content, aggressive compression acts as an instrument for localizing task-relevant signal: at 144x compression the preserved information concentrates at occipitotemporal electrodes around the N170 (150 to 200 ms), and an independently trained classifier identifies the viewed object with 100 percent accuracy, versus 88 percent for the fidelity baseline. Object identity in single-subject EEG is therefore low-dimensional, spatially and temporally localized, and robust to compression.
 
+<p align="center"><img src="images/demo_interface.png" width="900" alt="Interactive demo: free-text to EEG retrieval, per-tier codec metrics, and the reconstruction viewer" /></p>
+
+The interactive demo (`serve_pitch.sh` / `serve_clean_v2.sh`): free-text to EEG retrieval with the task-aware codec and the fidelity baseline side by side (top), per-tier metrics for all codecs (middle), and a per-epoch reconstruction viewer (bottom). THINGS-EEG, subject `sub-01`, v4 codecs.
+
 ## Method
 
 ### Architecture

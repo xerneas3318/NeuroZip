@@ -5,38 +5,49 @@
 > CLIP-decodable semantic content of the EEG - making the compressed corpus
 > text-searchable.
 
-## TL;DR - what compression revealed about the brain
+## TL;DR
 
-Object identity in single-subject EEG is **spatially + temporally
-localized**, and it survives **144× compression** with **100%
-concept-identification accuracy** on an independent classifier - trained
-on a different EEG split, with a different loss, that our codec was
-never optimized against.
+**Engineering claim.** A task-aware EEG codec that preserves more
+retrievability per bit than an MSE-only baseline at every compression
+tier. At the headline 144× tier: top-5 retrieval 29% vs the fidelity
+baseline's 19% (200-way; raw-EEG ceiling 45%; chance 2.5%). An
+independent classifier the codec was never trained against confirms the
+win at the only tier where it doesn't saturate (NeuroZip 100% vs
+fidelity 88% at 144×; both methods ~100% at higher tiers).
 
-NeuroZip's task loss concentrates preservation exactly where the visual
-system encodes object identity:
+**Validation claim** (not a discovery). NeuroZip's task loss is a
+supervised CLIP-image objective. What it preserves tightest is *exactly*
+what visual-ERP neuroscience would predict — read this as evidence the
+codec is shaping the right thing, not as an unsupervised discovery.
 
-- **WHERE.** Visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
-  **32% tighter** under NeuroZip than under a fidelity-only codec at
-  matched architecture - vs only **7%** tighter on non-visual channels.
-  A **4.7× spatial preference**.
-- **WHEN.** Visual-evoked ERP windows reconstruct **12–25% tighter**.
-  N170 (the face/object-recognition component, 150–200 ms post-stimulus):
-  NeuroZip MSE is **25.4% below** fidelity. P200 (17.8%), P100 (12.6%),
-  and P300 (12.1%) all favored too.
-- **HOW MUCH SURVIVES.** A separate concept classifier - different data,
-  different loss, different output head - hits **100% top-1** on
-  NeuroZip-decompressed EEG at 144× compression. The information needed
-  to identify what someone looked at is *low-dimensional* and *retrievable
-  from a tiny fraction of the original signal*.
+All bio numbers below are at v4_low (144×), the same tier the
+compression ratio comes from:
 
-Reading these as a single claim: *compression as a microscope*. We
-crushed the EEG until only what a downstream task cares about could
-survive - and what survived re-discovered, unsupervised, the
-neurophysiology of object recognition.
+- **WHERE.** Visual-cortex channels (O1 O2 Oz Iz PO7 PO8 PO3 PO4 POz P7
+  P8 P9 P10) reconstruct **21.0% tighter** under NeuroZip than under a
+  fidelity-only codec at matched architecture, vs **5.0% tighter** on
+  the other 50 channels — a **4.16× spatial preference**, p &lt; 0.001
+  (permutation test, 10 000 random 13-channel sets;
+  [`plots/phase2_permutation.json`](plots/phase2_permutation.json)).
+- **WHEN.** N170 (the face/object-recognition window, 150–200 ms): NeuroZip
+  MSE **16.1% below** fidelity. P100 (16.2%), P300 (10.7%) also favored;
+  P200 is at parity (−3.2%) — not every ERP component favors NeuroZip at
+  this tier. Don't oversell it.
+- **HOW MUCH SURVIVES.** At 144×, the independent classifier reads
+  NeuroZip at 100% and fidelity at 88%. At every higher tier this judge
+  saturates near 100% for both methods — so the per-bit retrieval edge
+  (the previous bullet) is the load-bearing claim, not held-out accuracy.
+
+**Honest caveats.** One subject. Trial-averaged. The check-1 single-
+channel ablation in [`plots/phase0_summary.json`](plots/phase0_summary.json)
+cuts the other way: fidelity's downstream classifier depends more on a
+single occipital channel (P8 drops it 12.5 pp), while NeuroZip distributes
+the signal so no single channel matters above 3 pp. Different lens,
+different story; both are in the repo.
 
 Numerical evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
 [`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json),
+[`plots/phase2_permutation.json`](plots/phase2_permutation.json),
 [`results.md`](results.md).
 
 > **One-sentence engineering pitch.** The same frozen model that decides
@@ -99,32 +110,28 @@ P + CLIP are frozen, but **gradient flows through P** into the codec decoder
 - **Recommended generation: v4** - conv-only codec + attention projector
   + attention held-out classifier. Train with `./train.sh sweep_v4`.
 
-## Numbers (sub-01, trial-averaged 80 reps; image-prompt retrieval, top-5 over 200 concepts)
+## Numbers — recommended v4 generation (sub-01, trial-averaged 80 reps; image-prompt retrieval, top-5 over 200 concepts)
 
-| codec          |  bpp  | ratio vs fp16 |  mse   | top-1 | top-5 | top-10 | held-out top-1 |
-|----------------|------:|--------------:|-------:|------:|------:|-------:|---------------:|
-| **raw EEG**    | 16.000|         1× |  -  | 13.5% | 37.5% | 50.5%  |     -       |
-| fidelity_low   | 0.080 |        199× | 0.0449 |  2.5% | 14.0% | 20.0%  |    53.0%       |
-| fidelity_med   | 0.154 |        104× | 0.0365 |  5.0% | 16.0% | 26.5%  |    85.5%       |
-| fidelity_high  | 0.206 |         78× | 0.0266 |  5.5% | 16.0% | 29.5%  |    82.0%       |
-| **neurozip_low**  | 0.092 |    175× | 0.0394 |  4.0% | **16.0%** | **28.5%** | **94.5%** |
-| **neurozip_med**  | 0.171 |     93× | 0.0366 |  5.5% | **19.5%** | **34.0%** | **96.0%** |
-| **neurozip_high** | 0.217 |     74× | 0.0246 |  6.0% | **22.5%** | **37.5%** | **99.5%** |
+| codec | bpp ↓ | ratio ↑ | MSE | top-1 | top-5 | top-10 | held-out top-1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **raw EEG** | 16.000 | 1× | — | 18.5% | 45.0% | 65.0% | — |
+| `fidelity_v4_low` | 0.076 | 210× | 0.0401 | 5.5% | 19.0% | 29.0% | 88.0% |
+| `fidelity_v4_med` | 0.154 | 104× | 0.0298 | 8.0% | 26.5% | 38.0% | 99.5% |
+| `fidelity_v4_high` | 0.209 | 76× | 0.0231 | 8.0% | 26.5% | 40.5% | 100.0% |
+| `fidelity_v4_xhigh` | 0.248 | 64× | 0.0213 | 9.5% | 31.5% | 43.5% | 100.0% |
+| **`neurozip_v4_low`** | 0.111 | **144×** | 0.0359 | **10.5%** | **29.0%** | **42.5%** | **100.0%** |
+| **`neurozip_v4_med`** | 0.190 | 84× | 0.0251 | **10.5%** | **32.5%** | **47.0%** | **100.0%** |
+| **`neurozip_v4_high`** | 0.222 | 72× | 0.0234 | **14.0%** | **37.5%** | **52.0%** | **100.0%** |
+| **`neurozip_v4_xhigh`** | 0.250 | 64× | 0.0223 | **14.5%** | **35.5%** | **50.0%** | **100.0%** |
 
-Read it across rows: at every compression tier, NeuroZip preserves more of the
-raw EEG's retrievability than the fidelity codec, and the held-out classifier
-(an independent judge that the codec's loss never optimized against) is the
-strongest signal - NeuroZip jumps from ~85% (fidelity) to ~96–99% retained.
-
-Notably:
-- **At ~95× compression, NeuroZip matches the fidelity codec's top-5 from
-  ~104× and beats fidelity at every higher bpp tier the fidelity codec never
-  reaches.**
-- Fidelity_high *uses 2.5× more bits* than fidelity_low but plateaus at 16%
-  top-5 - pure rate doesn't buy retrievability. NeuroZip's curve keeps climbing.
-- Fidelity is slightly better on raw MSE (0.0246 vs 0.0266 for the high tier),
-  which is exactly the point: NeuroZip is *worse* on bit-by-bit fidelity yet
-  *better* on what the EEG is *about*.
+Read it across rows: at every compression tier, NeuroZip preserves more
+of the raw EEG's retrievability than the fidelity codec at matched
+architecture. The held-out classifier (an independent judge that the
+codec's loss never optimized against) saturates near 100% for both
+methods *except* `fidelity_v4_low` at 210× compression (88%) — so the
+load-bearing differentiator is the per-bit retrieval gap, not held-out
+accuracy. Full iso-rate comparison and per-query examples in
+[`results.md`](results.md).
 
 The money plot: `demo/assets/rate_retrieval.png`.
 

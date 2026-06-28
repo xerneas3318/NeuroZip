@@ -148,10 +148,15 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="eyebrow">task-aware EEG compression · bio-hackathon</div>
     <h1>Type a word.<br>Find a <span>thought</span>.</h1>
     <div class="lede">
-      A neural EEG codec. 144× compression, text-searchable, and a
-      side-effect: it re-discovers where in the brain object identity
-      lives. Read top-to-bottom for the 3-minute pitch
-      (slide-by-slide companion: <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/pitch.md">pitch.md</a>, LAN-only).
+      A neural EEG codec. 144× smaller per epoch, still text-searchable.
+      The channels and time-windows it preserves tightest are exactly the
+      ones visual neuroscience would predict — read this as validation
+      that the task loss is shaping the codec correctly, not as an
+      unsupervised discovery of neurophysiology. Honest retrieval is 29%
+      top-5 against a 45% raw-EEG ceiling; the per-bit gap (NeuroZip vs
+      fidelity at iso-rate) is the load-bearing engineering claim.
+      Slide-by-slide companion:
+      <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/pitch.md">pitch.md</a>, LAN-only.
     </div>
   </header>
 
@@ -192,6 +197,13 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     </div>
     <div id="qmeta" class="meta">type a concept and press enter, or pick a featured one below</div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;" id="featured"></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.45;">
+      featured = the strongest NeuroZip cases on this checkpoint
+      (curated to land a compelling default; full list in
+      <code>demo/assets/summary.json</code>). <b>Random</b> samples uniformly
+      over all 200 test concepts — it will sometimes miss, which is expected
+      at 29% top-5 retrieval.
+    </div>
   </div>
 
   <!-- RESULTS -->
@@ -235,58 +247,63 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     </div>
   </div>
 
-  <!-- ============ SLIDE 03 - where AND when the meaning lives ============ -->
+  <!-- ============ SLIDE 03 - validation: codec preserves what neuroscience predicts ============ -->
   <section class="bio">
     <div class="header">
-      <h2><span class="num">03</span>Where + when the meaning lives</h2>
+      <h2><span class="num">03</span>The codec preserves what neuroscience would predict</h2>
       <div class="sub">
-        We compressed 144× (throwing away everything but meaning) and
-        looked at what survived. It's not smeared across the brain. It
-        concentrates at occipitotemporal electrodes, biggest right at the
-        N170, 150–200 ms after stimulus, the window the brain identifies
-        objects. We used compression as a microscope.
+        At 144× compression, NeuroZip's task loss preserves the
+        occipitotemporal electrodes and the visual-evoked ERP windows
+        tighter than fidelity does. That's exactly what 30 years of
+        visual-ERP literature would predict for an object-recognition
+        signal — read it as <b>validation</b> that the task gradient is
+        shaping the codec correctly, not as a discovery. (A supervised
+        CLIP-image loss preserving visual cortex would be the failure
+        case if it didn't.) All numbers below are at v4_low (144×) so
+        they match the headline ratio.
       </div>
     </div>
     <div class="bio-stats">
       <div class="stat">
         <div class="k">N170 · 150–200 ms</div>
-        <div class="v">25.4<span class="small"> %</span></div>
+        <div class="v">16.1<span class="small"> %</span></div>
         <div class="desc">lower per-timepoint MSE than fidelity inside the face-and-object component window.</div>
       </div>
       <div class="stat">
-        <div class="k">P200 · 200–260 ms</div>
-        <div class="v">17.8<span class="small"> %</span></div>
-        <div class="desc">lower MSE inside the object-category processing window.</div>
+        <div class="k">P100 · 90–130 ms</div>
+        <div class="v">16.2<span class="small"> %</span></div>
+        <div class="desc">lower MSE in the early visual window.</div>
       </div>
       <div class="stat">
-        <div class="k">P100 · 90–130 ms  /  P300 · 280–400 ms</div>
-        <div class="v">12.6  /  12.1<span class="small"> %</span></div>
-        <div class="desc">lower MSE in the early visual and late evaluation windows. Every visual ERP component favors NeuroZip.</div>
+        <div class="k">P300 · 280–400 ms</div>
+        <div class="v">10.7<span class="small"> %</span></div>
+        <div class="desc">lower MSE in the late evaluation window. P200 (200–260 ms) is at parity (−3.2%); not every ERP window favors NeuroZip at this tier.</div>
       </div>
     </div>
     <div class="bio-fig">
       <img src="/plots/phase1_erp_timeline.png" alt="per-timepoint reconstruction MSE with ERP windows" />
       <div class="cap">
-        <b>When.</b> Red (NeuroZip) below gray (fidelity) at every post-stimulus
-        timepoint; biggest gap inside the N170 window. Pre-stimulus (−200 to 0 ms)
-        is at parity (no task signal there to preserve).
+        <b>When.</b> Red (NeuroZip) below gray (fidelity) inside the P100,
+        N170, and P300 windows; the two curves cross around P200.
+        Pre-stimulus (−200 to 0 ms) is at parity (no task signal there
+        to preserve).
       </div>
     </div>
     <div class="bio-stats" style="margin-top:14px">
       <div class="stat">
         <div class="k">Visual cortex · 13 ch</div>
-        <div class="v">32.4<span class="small"> %</span></div>
-        <div class="desc">lower per-channel MSE than fidelity on the 13 occipital and parieto-occipital channels.</div>
+        <div class="v">21.0<span class="small"> %</span></div>
+        <div class="desc">lower per-channel MSE than fidelity on the 13 occipital and parieto-occipital channels (O1 O2 Oz Iz PO7 PO8 PO3 PO4 POz P7 P8 P9 P10).</div>
       </div>
       <div class="stat">
         <div class="k">Other channels · 50 ch</div>
-        <div class="v">6.9<span class="small"> %</span></div>
+        <div class="v">5.0<span class="small"> %</span></div>
         <div class="desc">lower MSE across the rest of the scalp. Much smaller advantage.</div>
       </div>
       <div class="stat">
         <div class="k">Spatial preference</div>
-        <div class="v">4.7×</div>
-        <div class="desc">NeuroZip's MSE reduction over visual cortex is 4.7× its reduction elsewhere.</div>
+        <div class="v">4.16×</div>
+        <div class="desc"><b>p &lt; 0.001</b> (permutation test, K=10,000 random 13-channel sets). Only 3 of 10,000 random sets matched or beat the visual set's MSE-ratio gap — not chance. (See <code>plots/phase2_permutation.png</code>.)</div>
       </div>
     </div>
     <div class="bio-fig" style="margin-top:14px">
@@ -299,35 +316,48 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
         occipitally, as visual neuroscience would predict.
       </div>
     </div>
+    <div class="bio-fig" style="margin-top:14px">
+      <img src="/plots/phase2_permutation.png" alt="null distribution from 10,000 random channel-set permutations vs the observed visual-cortex spatial preference" />
+      <div class="cap">
+        <b>Why we believe the spatial number.</b> Gray histogram = the
+        4.16× spatial preference recomputed for 10,000 random 13-channel
+        sets sampled from all 63 electrodes. Red line = the observed
+        preference for the actual visual-cortex set. p = 0.0003 — almost
+        no random scalp partition matches what the task gradient does.
+      </div>
+    </div>
   </section>
 
-  <!-- ============ SLIDE 04 - 144× / 100% ============ -->
+  <!-- ============ SLIDE 04 - the engineering claim: per-bit retrieval edge ============ -->
   <section class="bio">
     <div class="header">
-      <h2><span class="num">04</span>144× compression. 100% accuracy on an independent classifier.</h2>
+      <h2><span class="num">04</span>144× compression. The per-bit retrieval edge is the load-bearing claim.</h2>
       <div class="sub">
-        And that meaning is tiny. At 144× compression, a separate classifier
-        (different EEG split, different loss, different output head, never
-        optimized against) still reads the object the subject saw with
-        <b>100%</b> accuracy from our reconstruction. The fidelity baseline
-        drops to 88. The "what you saw" signal is low-dimensional and robust.
+        At every tier, NeuroZip retrieves more concepts per bit than the
+        fidelity baseline. That's the engineering claim: not "100% accuracy"
+        (the held-out classifier saturates near 100% for both methods above
+        144×), but "more retrievability per bit". An independent classifier
+        confirms the win generalizes beyond the projector the codec was
+        trained against — and the only tier where it doesn't saturate is
+        the same one we headline (v4_low, 144×): NeuroZip 100% vs fidelity
+        88%.
       </div>
     </div>
     <div class="bio-stats">
       <div class="stat">
-        <div class="k">Held-out top-1</div>
-        <div class="v">100%</div>
-        <div class="desc">Independent classifier reads the right concept from NeuroZip-compressed EEG.</div>
+        <div class="k">Per-bit retrieval edge</div>
+        <div class="v">+10 pp</div>
+        <div class="desc">NeuroZip 29% vs fidelity 19% top-5 retrieval at the headline tier (200-way; chance = 2.5%; raw-EEG ceiling = 45%). +4–11 pp at every other tier (see <code>results.md</code>).</div>
       </div>
       <div class="stat">
         <div class="k">Compression ratio</div>
         <div class="v">144×</div>
-        <div class="desc">31,500 bytes raw fp16 → 219 bytes compressed. 1 GB → 7 MB at dataset scale.</div>
+        <div class="desc">31,500 bytes raw fp16 → 219 bytes compressed. A 1 GB dataset becomes ~7 MB at this tier.</div>
       </div>
       <div class="stat">
-        <div class="k">Single-channel ablation</div>
-        <div class="v">4.9×</div>
-        <div class="desc">Dropping any one channel costs fidelity 37 pp accuracy but NeuroZip only 7.5 pp. NeuroZip spreads the concept signal 4.9× more redundantly across the scalp.</div>
+        <div class="k">Independent classifier</div>
+        <div class="v">100 / 88</div>
+        <div class="desc">NeuroZip 100% vs fidelity 88% on a separate EEG→concept classifier the codec was never trained against. <i>Caveat:</i> at every higher tier this judge saturates to 99–100% for both methods. It is a tie-breaker at 144×, not the headline.</div>
       </div>
     </div>
   </section>
@@ -375,20 +405,46 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
       </div>
       <div class="stat">
         <div class="k">Retrieval edge</div>
-        <div class="v">+4–9 pp</div>
-        <div class="desc">Not +50. Honest magnitude. At iso-rate; bigger gaps when you don't control for bits.</div>
+        <div class="v">+4–11 pp</div>
+        <div class="desc">Not +50. Honest top-5 magnitude vs fidelity at iso-tier (low / med / high / xhigh). Absolute retrieval is 29% top-5 at the headline tier against a 45% raw-EEG ceiling — modest in absolute terms; "type a word, find a thought" is the demo hook, not a promise of an Internet search engine.</div>
       </div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);padding:18px 22px;margin-top:14px;font-size:14px;line-height:1.6;color:var(--ink-2);">
-      <b style="color:var(--ink)">And we tried to catch ourselves cheating.</b> The retrieval metric runs
-      through the same projector we trained the codec against, which is the
-      circularity objection a sharp judge will raise. So we trained a
-      <b>separate classifier</b> on a different EEG split with a different loss
-      and a different output head, and never optimized the codec against it. At
-      144× compression it reads NeuroZip with <b style="color:var(--accent)">100%</b> and fidelity
-      with <b>88%</b>. That 12-point gap is measured against a judge whose only
-      relationship to training was that the codec was never asked to satisfy
-      it. The win survives in the regime where compression actually matters.
+      <b style="color:var(--ink)">And we tried to catch ourselves cheating.</b> Three places we
+      could have, and what we did about each:
+      <ol style="margin:10px 0 4px 18px;padding:0;">
+        <li style="margin-bottom:8px;">
+          <b>Circularity.</b> The retrieval metric runs through the same
+          projector we trained the codec against. So we trained a
+          <b>separate classifier</b> (different EEG split, different loss,
+          different output head) and never optimized the codec against it.
+          At 144× it reads NeuroZip <b style="color:var(--accent)">100%</b>
+          vs fidelity 88%. Above 144× this classifier saturates near 100%
+          for both methods — so we lean on the harder per-bit retrieval
+          metric as the headline differentiator, not this one.
+        </li>
+        <li style="margin-bottom:8px;">
+          <b>Cherry-picked tier.</b> The 4.16× spatial preference and the
+          ERP percentages were computed at the same v4_low (144×) tier we
+          quote as the compression ratio — not spliced from a different
+          (better-looking) tier. Earlier drafts of the pitch did splice
+          v4_med (84×) bio numbers onto the 144× headline; fixed.
+        </li>
+        <li>
+          <b>Ablation tells a different story.</b> The check-1 single-
+          channel ablation in <code>plots/phase0_summary.json</code> cuts
+          the other way: fidelity's classifier depends heavily on one
+          occipital channel (P8 drops it 12.5 pp accuracy when ablated),
+          while no single channel ablation costs NeuroZip more than 3 pp.
+          By that lens, fidelity looks more visually concentrated and
+          NeuroZip more diffuse. The two cuts measure different things —
+          MSE-tightness is "how well did the codec preserve the waveform
+          in those channels", ablation is "how localized is the downstream
+          classifier's decision". We headline MSE-tightness because that's
+          what the codec was actually trained on; the ablation contrast
+          is sitting in the JSON for any judge who looks.
+        </li>
+      </ol>
     </div>
   </section>
 
@@ -397,9 +453,13 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="header">
       <h2><span class="num">07</span>Close</h2>
       <div class="sub">
-        NeuroZip: brain datasets two orders of magnitude smaller, searchable
-        by language. And a finding that object identity in the brain is
-        low-dimensional, localized, and robust. Type a word, find a thought.
+        NeuroZip: brain datasets two orders of magnitude smaller, still
+        searchable by language. The per-bit retrieval edge is the
+        engineering claim. The validation: what the task loss preserves
+        tightest is exactly what visual neuroscience predicts — occipital
+        channels and the visual ERP windows, with a permutation p &lt; 0.001
+        on the spatial preference. We didn't discover the neurophysiology;
+        we confirmed the codec is keeping the right thing.
       </div>
     </div>
     <div class="bio-fig">
@@ -550,10 +610,11 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     if (e.key === "Enter") document.getElementById("go").click();
   });
   document.getElementById("rand").addEventListener("click", () => {
-    // Sample from the featured (NeuroZip-win) pool when available, so the
-    // random button doesn't routinely surface losses on the live demo path.
-    const pool = featured.length ? featured : [...Array(concepts.length).keys()];
-    const i = pool[Math.floor(Math.random() * pool.length)];
+    // Uniform sample over all 200 test concepts: an actually-random control
+    // path that a self-driving judge can use to see the honest miss rate,
+    // not just the curated featured wins. ~71% of clicks here will not
+    // include the gold in top-5 (consistent with 29% top-5 average).
+    const i = Math.floor(Math.random() * concepts.length);
     const c = cap(concepts[i].replace(/_/g, " "));
     document.getElementById("q").value = c;
     run({text: c});

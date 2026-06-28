@@ -15,35 +15,49 @@ design rationale and the v1 → v4 evolution story.
 
 ## TL;DR
 
-> **Object identity in single-subject EEG is spatially + temporally
-> localized - and survives 144× compression with 100% concept-
-> identification accuracy on an independent judge.**
+> **Engineering claim.** A task-aware EEG codec that preserves more
+> retrievability per bit than an MSE-only baseline at every compression
+> tier (+4 to +11 pp top-5 vs fidelity at iso-rate). An independent
+> concept classifier the codec was never trained against confirms the
+> win at the only tier where it doesn't saturate.
 >
-> NeuroZip's task loss concentrates preservation exactly where the
-> visual system encodes object information:
-> - **WHERE**: visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
->   **32% tighter** under NeuroZip than under a fidelity-only codec at
->   matched compression, vs only **7%** tighter on non-visual channels  - 
->   a **4.7× spatial preference**.
-> - **WHEN**: visual-evoked ERP windows reconstruct **12–25% tighter**.
->   N170 (face/object component, 150–200 ms): NeuroZip MSE is **25.4%
->   below** fidelity. P200, P100, P300 all also favored.
-> - **HOW MUCH SURVIVES**: a separate concept classifier - trained on a
->   different data split and a different loss - hits **100% top-1** on
->   NeuroZip-decompressed EEG at 144× compression. The information
->   needed to identify what someone looked at is *low-dimensional* and
->   *retrievable from a tiny fraction of the original signal*.
+> **Validation claim.** What the supervised CLIP-image task loss
+> preserves tightest is *exactly* what visual-ERP neuroscience would
+> predict: occipital channels and the visual ERP windows. Read this as
+> evidence the codec is shaping the right thing, **not** an unsupervised
+> discovery (the loss is supervised; visual cortex would be the failure
+> case if it didn't preserve there).
+>
+> All bio numbers are computed at v4_low (144×), the same tier the
+> compression ratio comes from:
+>
+> - **WHERE.** Visual-cortex channels (O1 O2 Oz Iz PO7 PO8 PO3 PO4 POz
+>   P7 P8 P9 P10) reconstruct **21.0% tighter** under NeuroZip than under
+>   a fidelity-only codec at matched architecture, vs only **5.0%**
+>   tighter on the other 50 channels — a **4.16× spatial preference**.
+>   Permutation test: p &lt; 0.001 (10 000 random 13-channel sets).
+> - **WHEN.** N170 (face/object component, 150–200 ms): NeuroZip MSE
+>   **16.1% below** fidelity. P100 (16.2%) and P300 (10.7%) also
+>   favored; **P200 is at parity (−3.2%)** — not every ERP window favors
+>   NeuroZip at 144×.
+> - **HELD-OUT CLASSIFIER.** NeuroZip 100% vs fidelity 88% at 144× —
+>   the only tier where this judge doesn't saturate. At every higher
+>   tier both methods read near 100%, so the held-out classifier is a
+>   tie-breaker at 144×, **not** the headline claim.
+>
+> **Honest counter-cut.** The check-1 single-channel ablation in
+> [`plots/phase0_summary.json`](plots/phase0_summary.json) tells a
+> different story: fidelity's downstream classifier depends more on a
+> single occipital channel (P8 drops it 12.5 pp), while no single channel
+> ablation costs NeuroZip more than 3 pp. By that lens fidelity looks
+> more visually concentrated and NeuroZip more diffuse. The two cuts
+> measure different things (waveform preservation vs classifier
+> robustness); both are in the repo, so a judge can see both.
 >
 > Mechanism: see [`ARCHITECTURE.md`](ARCHITECTURE.md). Numerical
 > evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
-> [`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json).
-
-Original framing (storage-pressure / compression contribution):
-
-> **NeuroZip preserves more retrievability per bit at every compression tier.**
-> +4 to +11 percentage points on top-5 image-prompt retrieval vs the
-> fidelity baseline, while MSE is within ±5%. The held-out concept
-> classifier (independent judge) confirms the win generalizes.
+> [`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json),
+> [`plots/phase2_permutation.json`](plots/phase2_permutation.json).
 
 ## Setup
 
@@ -194,10 +208,16 @@ sweep + `evaluate.py` to regenerate the list (`demo/assets/summary.json`).
 ## How to reproduce
 
 ```bash
-git clone http://100.64.0.59:8081/root/neurozip.git
+# The repo is hosted internally on Gitea (LAN-only). If you have access,
+# clone from there; otherwise mirror locally and skip the network step.
+git clone http://<lan-host>:8081/root/neurozip.git       # internal Gitea, LAN-only
+# (no public mirror at submission time; an offline tarball can be
+#  produced with `git bundle create neurozip.bundle --all` for judging.)
 cd neurozip
 ./train.sh sweep_v4        # ~45 min on a single RTX 4090
 ./serve_clean.sh           # http://<host>:8011/clean
+.venv/bin/python scripts/phase1_bio_figures.py --tier low   # bio figures + numbers at 144×
+.venv/bin/python scripts/phase2_permutation.py              # permutation p-value for spatial preference
 ```
 
 Hyperparameters per stage are in `scripts/train_sweep_v4.sh`. The

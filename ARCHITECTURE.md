@@ -10,8 +10,8 @@ NeuroZip is an EEG codec trained so that what survives compression is the
 CLIP-decodable semantic content of the EEG, not its waveform fidelity. A
 trainable encoder–quantizer–decoder shrinks an EEG epoch to a small integer
 latent and back. Alongside the usual rate + reconstruction loss, a frozen
-*judge* - an EEG→CLIP projector pre-trained against the dataset's CLIP image
-features - measures how close the *reconstructed* EEG lands to the CLIP
+*judge* (an EEG→CLIP projector pre-trained against the dataset's CLIP image
+features) measures how close the *reconstructed* EEG lands to the CLIP
 embedding of the image the subject actually saw. The codec is penalized for
 moving away from that point. At inference, free text is encoded by CLIP's
 text encoder and used to retrieve EEG epochs whose decompressed projection
@@ -25,8 +25,8 @@ them as the "three easy-to-get-wrong spots"):
 1. **Gradient flow through the frozen judge.**
    `P` and CLIP are frozen (`requires_grad_(False)` on `P`, `no_grad` on the
    target embedding). The decoder must still receive gradient *through* `P`
- - i.e. don't wrap `P(EEĜ)` in `no_grad`; only the *target*
-   `CLIP_image(seen_image)` is detached. `train.py:_grad_flow_assert()`
+   (i.e. don't wrap `P(EEĜ)` in `no_grad`; only the *target*
+   `CLIP_image(seen_image)` is detached). `train.py:_grad_flow_assert()`
    runs at Stage-3 startup and asserts (a) the decoder gets non-zero grad
    from a task-only backward, (b) the judge's parameters do not. Skipping
    this check is the most common silent failure mode.
@@ -73,12 +73,12 @@ learnable per-channel scale.
 
 ## The judge (`clip_proj.py`)
 
-The projector `P` is a small dedicated network - depthwise temporal conv →
+The projector `P` is a small dedicated network: depthwise temporal conv →
 spatial mixer → 4-stage conv tower → (with `n_attn > 0`) [CLS]-token
 transformer head → L2-normalize → 512-dim CLIP-space vector.
 
 Trained Stage 1 with symmetric InfoNCE against the dataset's precomputed
-CLIP image features (LAION-2B variant - see "the CLIP gotcha" below).
+CLIP image features (LAION-2B variant; see "the CLIP gotcha" below).
 Frozen for all later stages.
 
 The `n_attn` parameter is the lever for the "attention on the projector"
@@ -164,12 +164,12 @@ alone."
 The dataset (`Haitao999/things-eeg`) ships precomputed CLIP image and text
 features at `Preprocessed_data_250Hz_whiten/ViT-B-32_features_*.pt`. The
 file names say "ViT-B-32", but **the features are not from the standard
-OpenAI weights** - they're from the LAION-2B variant
+OpenAI weights**; they're from the LAION-2B variant
 (`open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')`).
 
 Verified by direct cosine: an image encoded by LAION-2B's encoder matches
 the dataset's precomputed image feature at cos = 0.98; OpenAI's encoder
-gives cos = -0.06 (orthogonal - different space entirely).
+gives cos = -0.06 (orthogonal, different space entirely).
 
 This matters because `P` is trained against the dataset's image features,
 so its output lives in LAION-2B space. The live-inference text encoder in
@@ -192,7 +192,7 @@ fair takedown. So:
   judge it was trained against.
 
 With the v4 (attention) classifier this judge is so strong it tends to
-saturate near 100% for both NeuroZip and fidelity. That's not a bug  - 
+saturate near 100% for both NeuroZip and fidelity. That's not a bug;
 it's the held-out classifier saying "both methods preserve enough EEG
 to identify the concept". The discrimination between methods shows up
 in the harder projector-based retrieval metric instead.
@@ -201,11 +201,11 @@ in the harder projector-based retrieval metric instead.
 
 Two viewing surfaces, both backed by the same checkpoints:
 
-* `serve.py` - Flask backend, live CLIP encoding (LAION-2B), on-demand
+* `serve.py`: Flask backend, live CLIP encoding (LAION-2B), on-demand
   codec reconstruction, server-rendered matplotlib figures returned as
   base64 PNGs. `demo.html` is the SPA front-end. Reachable on
   `0.0.0.0:8011` via `./serve.sh`.
-* `notebook.ipynb` - standalone Jupyter notebook. Auto-detects which codec
+* `notebook.ipynb`: standalone Jupyter notebook. Auto-detects which codec
   generation is on disk (prefers v4), reuses checkpoints. 20 cells:
   setup → metrics table → rate–retrieval plot → reconstruction viewer
   → free-text retrieval → per-channel MSE + entropy histograms.
@@ -218,7 +218,16 @@ notebook and the server cannot drift apart.
 THINGS-EEG epochs are 1-second visual-presentation trials, not multi-hour
 clinical recordings. The storage pressure NeuroZip addresses is
 **dataset-scale**: millions of labeled trial epochs of brain↔image pairs.
-The Haitao re-release already re-stored EEG in float16 to halve size  - 
+The Haitao re-release already re-stored EEG in float16 to halve size;
 that's evidence the storage pressure is real for exactly this kind of
 data. Generalizing to long continuous recordings is future work and would
 require treating the codec as a streaming model rather than per-epoch.
+
+## Note on `plots/architecture.png`
+
+The schematic image above is a hand-drawn diagram (committed as a static
+PNG, no generator script). The ASCII data-flow block immediately below
+it is the source of truth and is generated by editing this file. If you
+update the model and the schematic drifts, redraw it or fall back to the
+ASCII block; do not assume the PNG and the equation stay in lockstep
+automatically.

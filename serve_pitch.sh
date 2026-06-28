@@ -23,6 +23,12 @@ if [[ ! -f plots/phase1_erp_timeline.png ]]; then
   echo "to generate the biology figures before serving the pitch." >&2
   exit 1
 fi
+if [[ ! -f plots/architecture.png ]]; then
+  echo "missing plots/architecture.png — the slide-05 schematic is a hand-drawn"
+  echo "asset (see ARCHITECTURE.md 'Note on plots/architecture.png'). Restore from"
+  echo "git history or replace with a freshly redrawn diagram before serving." >&2
+  exit 1
+fi
 
 echo "==================================================="
 echo "  NeuroZip — pitch (bio-hackathon hero)"

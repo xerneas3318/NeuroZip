@@ -33,3 +33,6 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# ECG data (regenerable; see ECG.md)
+data_ecg/

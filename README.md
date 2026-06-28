@@ -1,15 +1,15 @@
-# NeuroZip — task-aware EEG compression
+# NeuroZip - task-aware EEG compression
 
 > **Type a word → find the brain recording.**
 > A neural EEG codec trained so that *what survives compression* is the
-> CLIP-decodable semantic content of the EEG — making the compressed corpus
+> CLIP-decodable semantic content of the EEG - making the compressed corpus
 > text-searchable.
 
-## TL;DR — what compression revealed about the brain
+## TL;DR - what compression revealed about the brain
 
 Object identity in single-subject EEG is **spatially + temporally
 localized**, and it survives **144× compression** with **100%
-concept-identification accuracy** on an independent classifier — trained
+concept-identification accuracy** on an independent classifier - trained
 on a different EEG split, with a different loss, that our codec was
 never optimized against.
 
@@ -18,21 +18,21 @@ system encodes object identity:
 
 - **WHERE.** Visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
   **32% tighter** under NeuroZip than under a fidelity-only codec at
-  matched architecture — vs only **7%** tighter on non-visual channels.
+  matched architecture - vs only **7%** tighter on non-visual channels.
   A **4.7× spatial preference**.
 - **WHEN.** Visual-evoked ERP windows reconstruct **12–25% tighter**.
   N170 (the face/object-recognition component, 150–200 ms post-stimulus):
   NeuroZip MSE is **25.4% below** fidelity. P200 (17.8%), P100 (12.6%),
   and P300 (12.1%) all favored too.
-- **HOW MUCH SURVIVES.** A separate concept classifier — different data,
-  different loss, different output head — hits **100% top-1** on
+- **HOW MUCH SURVIVES.** A separate concept classifier - different data,
+  different loss, different output head - hits **100% top-1** on
   NeuroZip-decompressed EEG at 144× compression. The information needed
   to identify what someone looked at is *low-dimensional* and *retrievable
   from a tiny fraction of the original signal*.
 
 Reading these as a single claim: *compression as a microscope*. We
 crushed the EEG until only what a downstream task cares about could
-survive — and what survived re-discovered, unsupervised, the
+survive - and what survived re-discovered, unsupervised, the
 neurophysiology of object recognition.
 
 Numerical evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
@@ -44,10 +44,10 @@ Numerical evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
 > what you kept.
 
 > **Where do I go next?**
-> - This README: install, run, file map, the numbers — biology first,
+> - This README: install, run, file map, the numbers - biology first,
 >   then the engineering result.
 > - [`pitch.md`](pitch.md): the 3-minute stage script + Q&A prep.
-> - [`ARCHITECTURE.md`](ARCHITECTURE.md): the *why* — design rationale,
+> - [`ARCHITECTURE.md`](ARCHITECTURE.md): the *why* - design rationale,
 >   the v1 → v4 evolution, the three easy-to-get-wrong spots in detail,
 >   the CLIP-variant gotcha, and the circularity defense.
 > - [`results.md`](results.md): the full per-tier numerical breakdown.
@@ -86,7 +86,7 @@ P + CLIP are frozen, but **gradient flows through P** into the codec decoder
   250-sample epochs. Train: 16 540 image-trials × 4 reps. Test: 200 concepts
   × 80 reps.
 - **Frozen judge:** ViT-B/32 CLIP image/text features come precomputed in the
-  dataset (LAION-2B weights — *not* OpenAI; see [`ARCHITECTURE.md`](ARCHITECTURE.md)
+  dataset (LAION-2B weights - *not* OpenAI; see [`ARCHITECTURE.md`](ARCHITECTURE.md)
   for the gotcha). We never invoke CLIP at training.
 - **Projector P:** depthwise temporal conv → channel-mix → 4-stage conv tower
   → ([CLS] + transformer blocks if `n_attn>0`) → L2-norm. 2.5 M params (conv)
@@ -94,16 +94,16 @@ P + CLIP are frozen, but **gradient flows through P** into the codec decoder
 - **Codec:** 1D-conv autoencoder with optional ViT bottleneck, latent
   (32 ch × 32 ts), factorized Laplace prior for rate, uniform-noise
   quantizer at training, integer round at inference. **Default: conv-only**
-  (~0.75 M params) — see ARCHITECTURE for why attention here actually hurts
+  (~0.75 M params) - see ARCHITECTURE for why attention here actually hurts
   the story.
-- **Recommended generation: v4** — conv-only codec + attention projector
+- **Recommended generation: v4** - conv-only codec + attention projector
   + attention held-out classifier. Train with `./train.sh sweep_v4`.
 
 ## Numbers (sub-01, trial-averaged 80 reps; image-prompt retrieval, top-5 over 200 concepts)
 
 | codec          |  bpp  | ratio vs fp16 |  mse   | top-1 | top-5 | top-10 | held-out top-1 |
 |----------------|------:|--------------:|-------:|------:|------:|-------:|---------------:|
-| **raw EEG**    | 16.000|         1× |    —   | 13.5% | 37.5% | 50.5%  |       —        |
+| **raw EEG**    | 16.000|         1× |  -  | 13.5% | 37.5% | 50.5%  |     -       |
 | fidelity_low   | 0.080 |        199× | 0.0449 |  2.5% | 14.0% | 20.0%  |    53.0%       |
 | fidelity_med   | 0.154 |        104× | 0.0365 |  5.0% | 16.0% | 26.5%  |    85.5%       |
 | fidelity_high  | 0.206 |         78× | 0.0266 |  5.5% | 16.0% | 29.5%  |    82.0%       |
@@ -114,14 +114,14 @@ P + CLIP are frozen, but **gradient flows through P** into the codec decoder
 Read it across rows: at every compression tier, NeuroZip preserves more of the
 raw EEG's retrievability than the fidelity codec, and the held-out classifier
 (an independent judge that the codec's loss never optimized against) is the
-strongest signal — NeuroZip jumps from ~85% (fidelity) to ~96–99% retained.
+strongest signal - NeuroZip jumps from ~85% (fidelity) to ~96–99% retained.
 
 Notably:
 - **At ~95× compression, NeuroZip matches the fidelity codec's top-5 from
   ~104× and beats fidelity at every higher bpp tier the fidelity codec never
   reaches.**
 - Fidelity_high *uses 2.5× more bits* than fidelity_low but plateaus at 16%
-  top-5 — pure rate doesn't buy retrievability. NeuroZip's curve keeps climbing.
+  top-5 - pure rate doesn't buy retrievability. NeuroZip's curve keeps climbing.
 - Fidelity is slightly better on raw MSE (0.0246 vs 0.0266 for the high tier),
   which is exactly the point: NeuroZip is *worse* on bit-by-bit fidelity yet
   *better* on what the EEG is *about*.
@@ -134,7 +134,7 @@ Three convenience scripts cover the common workflow:
 
 ```bash
 # 1. one-shot training: venv + dataset subset + all stages (idempotent)
-./train.sh              # full pipeline (currently v2 codecs — see variants below)
+./train.sh              # full pipeline (currently v2 codecs - see variants below)
 ./train.sh sweep_v4     # recommended generation (conv codec + attention judge)
 
 # 2. live demo backend (binds 0.0.0.0:8011 by default, LAN-visible)
@@ -186,13 +186,13 @@ Each stage is independently runnable:
 | `serve.py` | Flask backend: live CLIP text encoding, on-demand codec reconstruction, server-rendered figures |
 | `demo.html` | Live demo (talks to `serve.py`) with free-text query + reconstruction viewer |
 | `notebook.ipynb` | Standalone Jupyter viewer; auto-detects which codec generation is on disk |
-| `scripts/build_notebook.py` | Regenerable notebook source — edit + re-run to rebuild `notebook.ipynb` |
+| `scripts/build_notebook.py` | Regenerable notebook source - edit + re-run to rebuild `notebook.ipynb` |
 | `scripts/download_data.sh` | Targeted ~3 GB subset download (not the 33k-file naive load) |
 | `scripts/train_sweep_v2.sh` | ViT-bottleneck codec sweep (4 tiers) |
 | `scripts/train_sweep_v3.sh` | NeuroZip codecs against the attention projector |
 | `scripts/train_sweep_v4.sh` | **Recommended.** Conv-only codecs against attention projector |
 | `scripts/train_v3_chain.sh` | Convenience: projector retrain → classifier → v3 sweep |
-| `run_all.sh` | End-to-end pipeline (idempotent — re-runs cheaply) |
+| `run_all.sh` | End-to-end pipeline (idempotent - re-runs cheaply) |
 | `train.sh` / `serve.sh` | One-shot entry points |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Design rationale & v1 → v4 evolution |
 
@@ -219,7 +219,7 @@ The compressor is trained with `P` + CLIP in the loop. If we only ever
 evaluated retrieval with `P` + CLIP, "great numbers against your own judge" is
 a fair takedown. So `train.py classifier` trains a **separate** EEG→concept
 classifier on the test set's repetition splits (different epochs than what the
-codec saw at train time, and a fundamentally different judge — softmax over
+codec saw at train time, and a fundamentally different judge - softmax over
 concepts, not contrastive against CLIP). `evaluate.py` reports its top-1 on
 the codec's decompressed EEG for every checkpoint, so you can verify that
 NeuroZip's win generalizes beyond the metric it was trained on.
@@ -229,7 +229,7 @@ NeuroZip's win generalizes beyond the metric it was trained on.
 THINGS-EEG epochs are short (1 s) trials, not long clinical recordings. The
 storage pressure NeuroZip addresses is **dataset-scale**: millions of labeled
 trial epochs of brain-image pairs. The Haitao release already re-stored EEG in
-float16 to halve size — that's evidence the storage pressure is real for
+float16 to halve size - that's evidence the storage pressure is real for
 exactly this kind of data.
 
 ## Citation

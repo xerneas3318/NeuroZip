@@ -111,13 +111,12 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
 
   <!-- HERO -->
   <header class="hero">
-    <div class="eyebrow">task-aware EEG compression · bio-hackathon</div>
-    <h1>Type what someone looked at →<br>find the <span>brain recording</span> they made.</h1>
+    <div class="eyebrow">task-aware EEG compression</div>
+    <h1>Type a word.<br>Find the <span>brain recording</span>.</h1>
     <div class="lede">
-      Object identity in single-subject EEG is spatially and temporally localized,
-      and it survives <b>144× compression</b> with <b>100% concept-identification accuracy</b> on a
-      separate classifier — trained on a different EEG split, with a different loss, that our
-      codec was never optimized against. Try the demo below, then scroll for the biology.
+      Object identity in EEG survives <b>144× compression</b> with
+      <b>100% concept-identification accuracy</b> on an independent classifier.
+      Type a concept below to see it.
     </div>
   </header>
 
@@ -166,17 +165,12 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
   <div class="interp">
     <div class="key">what you just saw</div>
     <div class="body">
-      Same brain recording, compressed two ways with the same architecture. At
-      this tier NeuroZip uses <b>~46% more bits per epoch</b> than the fidelity baseline
-      (219 B vs 150 B per 1-second EEG epoch); at the higher tiers
-      bits are matched within 5% and the picture doesn't change — see
-      <a href="https://github.com/anthropics/claude-code">results.md</a> for the iso-rate table.
-      NeuroZip's codec was trained with a loss term that says
-      "<i>preserve whatever lets us figure out what the person saw</i>." The
-      fidelity baseline minimizes raw waveform error and has no idea what's
-      semantically important. At aggressive compression they diverge: NeuroZip
-      reconstructs the meaning; fidelity reconstructs noise that happens to be
-      low-MSE.
+      Same brain recording, same architecture, two losses. Fidelity minimizes
+      waveform error. NeuroZip adds a term: "preserve whatever lets us figure
+      out what the person saw." At aggressive compression they diverge —
+      fidelity reconstructs noise that happens to be low-MSE; NeuroZip
+      reconstructs the meaning.
+      <span style="color:var(--muted);font-size:14px">(At this tier NeuroZip uses 46% more bits; bits match within 5% at higher tiers — full iso-rate table in <a href="https://github.com/anthropics/claude-code">results.md</a>.)</span>
     </div>
   </div>
 
@@ -185,11 +179,9 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="header">
       <h2><span class="num">01</span>When the meaning lives</h2>
       <div class="sub">
-        Reconstruction error along the post-stimulus time axis, averaged across
-        all 200 test concepts. NeuroZip systematically tightens the
-        reconstruction inside the four classical visual-evoked ERP windows —
-        P100, N170, P200, P300 — which are exactly the components neuroscience
-        attributes to object recognition.
+        NeuroZip tightens reconstruction inside the four classical
+        visual-evoked ERP windows — the same ones neuroscience attributes
+        to object recognition.
       </div>
     </div>
     <div class="bio-stats">
@@ -212,10 +204,9 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="bio-fig">
       <img src="/plots/phase1_erp_timeline.png" alt="per-timepoint reconstruction MSE with ERP windows" />
       <div class="cap">
-        <b>Read this plot:</b> red (NeuroZip) is below gray (fidelity) at every post-stimulus
-        timepoint, with the biggest gaps sitting inside the green ERP windows. The pre-stimulus baseline
-        (−200 to 0 ms) shows both methods at parity — there's no task-relevant signal there, and
-        NeuroZip's task loss has nothing to lean on.
+        Red (NeuroZip) below gray (fidelity) at every post-stimulus timepoint;
+        biggest gap inside the N170 window. Pre-stimulus (−200 to 0 ms) is at
+        parity — no task signal there to preserve.
       </div>
     </div>
   </section>
@@ -225,11 +216,8 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="header">
       <h2><span class="num">02</span>Where the meaning lives</h2>
       <div class="sub">
-        Reconstruction error per scalp electrode at standard 10-20 positions.
-        NeuroZip's advantage isn't uniform across the scalp — it concentrates
-        over occipital and occipitotemporal sites (O1 O2 Oz Iz PO7 PO8 …),
-        which is where the visual system encodes the object identity that the
-        task loss cares about.
+        NeuroZip's preservation concentrates over occipital + occipitotemporal
+        sites — where the visual system encodes object identity.
       </div>
     </div>
     <div class="bio-stats">
@@ -252,11 +240,11 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="bio-fig">
       <img src="/plots/phase1_topographic.png" alt="topographic head map of per-channel reconstruction error" />
       <div class="cap">
-        <b>Read this plot:</b> three head maps, viewed from above. <b>Left:</b> the fidelity codec's
-        per-channel reconstruction error — red blobs at the back of the head (occipital cortex)
-        because that's where the strongest signal is. <b>Center:</b> NeuroZip's error — the back-of-head
-        red blob is much smaller. <b>Right:</b> the difference — red means NeuroZip preserves better than
-        fidelity there; concentrated occipitally exactly as visual neuroscience would predict.
+        Three head maps, viewed from above. <b>Left:</b> fidelity's per-channel
+        error (big back-of-head blob = strong visual signal it fails to
+        preserve). <b>Center:</b> NeuroZip's error — same place, much smaller
+        blob. <b>Right:</b> the difference, red where NeuroZip wins — concentrated
+        occipitally, as visual neuroscience would predict.
       </div>
     </div>
   </section>
@@ -266,10 +254,9 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="header">
       <h2><span class="num">03</span>How much of it survives</h2>
       <div class="sub">
-        A separate classifier — trained on different EEG epochs with a different
-        loss — identifies the concept the subject saw with 100% top-1 accuracy
-        from NeuroZip-decompressed EEG at 144× compression. The information
-        needed for concept identification is genuinely low-dimensional.
+        Separate classifier, different EEG split, different loss, different
+        head — never optimized against. Reads NeuroZip's compressed signal at
+        100%.
       </div>
     </div>
     <div class="bio-stats">
@@ -296,22 +283,16 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="header">
       <h2><span class="num">04</span>And the engineering numbers</h2>
       <div class="sub">
-        At every compression tier we trained, NeuroZip's text-prompt retrieval
-        accuracy sits above the fidelity baseline's. The bigger the
-        compression ratio (left side of the curve), the larger the NeuroZip
-        contribution — which is the only regime where the contribution
-        actually matters.
+        NeuroZip's text-prompt retrieval sits above the fidelity baseline at
+        every compression tier. The bigger the ratio, the larger the gap.
       </div>
     </div>
     <div class="bio-fig">
       <img src="/demo/assets/rate_retrieval.png" alt="rate-retrieval curve" />
       <div class="cap">
-        <b>Read this plot:</b> x-axis = bits per EEG sample (lower = more compressed, more
-        useful storage savings). y-axis = how often the right concept lands in the top 5 retrievals
-        for a text query. NeuroZip (red) is above fidelity (gray) at every bpp we measured. At the
-        leftmost tier — most compressed, the regime where the storage saving is interesting —
-        NeuroZip retrieves the right concept 29% of the time vs fidelity's 19%, while using only 46% more
-        bits. The full iso-rate table is in <a href="https://github.com/anthropics/claude-code">results.md</a>.
+        x = bits per EEG sample (lower = more compressed). y = top-5 retrieval.
+        Red above gray everywhere; gap widens with compression. Full iso-rate
+        table in <a href="https://github.com/anthropics/claude-code">results.md</a>.
       </div>
     </div>
   </section>

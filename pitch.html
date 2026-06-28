@@ -104,6 +104,19 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
 
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #ddd;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Hero EEG band — visible brain-data evidence above the fold */
+.hero-eeg{margin:24px 0 14px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
+.hero-eeg-head{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+.hero-eeg-head .left{color:var(--ink-2);}
+.hero-eeg-head .left b{color:var(--accent);font-weight:500;}
+.hero-eeg img{width:100%;height:auto;display:block;}
+.hero-eeg .pulse{display:inline-block;width:8px;height:8px;background:#1f9d55;border-radius:50%;margin-right:8px;animation:pulse 1.6s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.hero-eeg .switcher{display:flex;gap:6px;}
+.hero-eeg .switcher button{padding:3px 9px;border:1px solid var(--border);background:#fff;color:var(--ink-2);font:inherit;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:.02em;}
+.hero-eeg .switcher button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.hero-eeg .switcher button:hover:not(.active){background:#fafafa;}
 </style>
 </head>
 <body>
@@ -120,6 +133,20 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
       pitch (slide-by-slide companion: <a href="https://github.com/anthropics/claude-code">pitch.md</a>).
     </div>
   </header>
+
+  <!-- ============ HERO EEG BAND — visible brain data above the fold ============ -->
+  <div class="hero-eeg" id="hero-eeg" aria-label="Live EEG epoch from the THINGS-EEG test set">
+    <div class="hero-eeg-head">
+      <div class="left">
+        <span class="pulse"></span>
+        one second of human EEG  ·  63 electrodes  ·  subject saw <b id="hero-eeg-concept">…</b>
+      </div>
+      <div class="switcher" id="hero-eeg-switcher">
+        <!-- buttons injected on load: one per featured concept -->
+      </div>
+    </div>
+    <img id="hero-eeg-img" alt="EEG channel × time visualization" />
+  </div>
 
   <!-- ============ SLIDE 01 + 02 — the live demo ============ -->
   <section class="bio" style="margin-bottom:24px;">
@@ -512,6 +539,31 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
     document.getElementById("q").value = cap(concepts[i].replace(/_/g, " "));
     run({concept_idx: i});
   });
+
+  // ---- hero EEG band: live render of a real test-set epoch ----
+  // Populate a switcher with up to 4 featured concepts (or fall back to a
+  // hardcoded short list) so the visitor can swap which brain recording is
+  // visible above the fold without leaving the page.
+  const heroPool = (featured.length ? featured.slice(0, 4) : [126, 150, 174, 7])
+    .filter(i => i != null && i >= 0 && i < concepts.length);
+  const heroSwitcher = document.getElementById("hero-eeg-switcher");
+  let currentHero = heroPool[0] ?? 0;
+  async function renderHero(idx) {
+    currentHero = idx;
+    document.getElementById("hero-eeg-concept").textContent = cap(concepts[idx].replace(/_/g, " "));
+    for (const b of heroSwitcher.querySelectorAll("button")) b.classList.toggle("active", +b.dataset.idx === idx);
+    const r = await fetch("/api/visualize_eeg", {method:"POST", headers:{"content-type":"application/json"},
+        body: JSON.stringify({epoch_idx: idx, title: "", theme: "light"})}).then(r => r.json());
+    document.getElementById("hero-eeg-img").src = r.fig;
+  }
+  for (const i of heroPool) {
+    const b = document.createElement("button");
+    b.dataset.idx = i;
+    b.textContent = cap(concepts[i].replace(/_/g, " "));
+    b.addEventListener("click", () => renderHero(i));
+    heroSwitcher.appendChild(b);
+  }
+  renderHero(currentHero);   // fire-and-forget; demo runs below in parallel
 
   // ---- initial render: ostrich (a clean NeuroZip win) ----
   const ostrich_idx = concepts.indexOf("ostrich");

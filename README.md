@@ -1,180 +1,100 @@
-# NeuroZip — task-aware EEG compression
+# NeuroZip
 
-Same-day hackathon project. **NeuroZip** is a neural EEG compressor trained to
-preserve what the EEG is *about* (the image embedding it represents) rather
-than pure waveform fidelity. The result: after aggressive compression you can
-still text-search the EEG corpus ("accordion" → retrieve the epochs recorded
-while the subject saw an accordion), while a fidelity-only codec at the same
-compression ratio loses retrievability.
+**Task-aware neural compression for brain/biomedical signals — ffmpeg, but it keeps the *meaning*.**
 
-> **One-sentence pitch.** The same frozen model that decides what to throw
-> away during compression is what lets you text-search what you kept.
+A normal codec optimizes raw fidelity (does the reconstruction look/measure like the original?).
+NeuroZip optimizes **decodable semantic content**: a frozen judge model sits in the compressor's
+training loop, so the codec learns to throw away bits that don't matter to downstream analysis and
+keep the ones that do. The result is a signal you can compress hard while it stays
+**text-searchable** and **retrievable** — where a fidelity-only codec at the same bitrate loses it.
+
+> **One-liner:** the same frozen model that decides what to throw away during compression is what
+> lets you text-search what you kept.
+
+First target: **EEG** (THINGS-EEG), with a CLIP-based judge so you can type a word and retrieve the
+EEG epochs recorded while a subject looked at that thing — even after aggressive compression.
+
+> **Status: v0.1.0-beta.1.** The CLI, the local drag-and-drop UI, and the importable
+> frozen layer all work today. `compress` / `decompress` / `search` currently emit
+> **placeholder (randomized)** results — the real neural codec is under construction.
+
+## Install
+
+**Homebrew** (recommended):
+```bash
+brew install xerneas3318/tap/neurozip
+```
+
+**curl**:
+```bash
+curl -fsSL https://raw.githubusercontent.com/xerneas3318/NeuroZip/main/install.sh | bash
+```
+
+**pip** (from source):
+```bash
+pip install "neurozip @ git+https://github.com/xerneas3318/NeuroZip"
+# with the neural layer / training stack:
+pip install "neurozip[ml] @ git+https://github.com/xerneas3318/NeuroZip"
+```
+
+The core install is **stdlib-only** (fast); PyTorch and friends live behind the `ml` extra.
+
+## CLI (ffmpeg-style)
+
+```bash
+neurozip compress   path/to/folder/   -o out.nz   --ratio 50
+neurozip decompress out.nz            -o restored/
+neurozip search     "accordion"       --in out.nz --topk 5
+neurozip serve                                          # local drag-and-drop UI (127.0.0.1:7878)
+neurozip ui                                             # alias for serve
+```
+
+## Use it as a frozen layer (no embedding to train)
+
+Drop NeuroZip in where you'd otherwise put a trainable embedding. It's a pretrained,
+**frozen** encoder, so you never spend gradients updating it — you train only the rest
+of your model, gradients still flow through:
+
+```python
+import torch
+from neurozip import NeuroZipLayer
+
+embed = NeuroZipLayer.from_pretrained("eeg-clip-b32")   # frozen, requires_grad=False
+x = torch.randn(8, 63, 200)        # (batch, channels, time)
+z = embed(x)                       # (8, 512) semantic embedding — no grad spent here
+logits = my_head(z)                # train only my_head
+```
+
+> Requires `pip install "neurozip[ml]"`. Beta: weights are frozen-random until a
+> checkpoint is published; the API is stable.
 
 ## How it works
 
-```
-              ┌─────────────────────────────────────────────────┐
-              │           NeuroZip codec (trained)              │
-EEG epoch ──► │  encoder ─► quantize ─► decoder ──► EEĜ        │
-              └────────────────────┬────────────────────────────┘
-                                   │
-                                   ▼
-                ┌──────────────────────────────────┐
-                │  projector P (frozen judge)      │
-                │  EEĜ ──► CLIP-image embedding ε̂ │
-                └──────────────────────────────────┘
-                                   │
-                ┌──────────────────┴────────────────────────────┐
-                │  CLIP-image embedding of the seen image  ε*  │  (frozen, no_grad)
-                └─────────────────────────────────────────────-─┘
-                                   │
-                       L_task = 1 − cos(ε̂, ε*)
-                              ──+──
-                  L = λ_rate · bits + λ_recon · ‖EEG−EEĜ‖² + λ_task · L_task
-```
+1. **Frozen judge** — a pretrained CLIP plus a small EEG→CLIP projector (trained once, then
+   frozen) that maps an EEG epoch into CLIP's shared image/text space.
+2. **Codec** — a 1D-conv autoencoder + learned entropy model giving a real bitrate.
+3. **Task-aware loss** — `rate + λ_recon·MSE + λ_task·(1 − cos(judge(decoded), CLIP_image(seen)))`.
+   Gradients flow *through* the frozen judge into the codec, so compression is optimized for
+   retrievability, not pixel/sample fidelity.
 
-P + CLIP are frozen, but **gradient flows through P** into the codec decoder
-(one of the three easy-to-get-wrong spots, see comments in `codec.py`).
+The headline result is a **rate vs retained-retrieval** curve: NeuroZip stays flat as you compress
+while a fidelity-only codec falls off a cliff.
 
-## Architecture / data
+## Layout
 
-- **Dataset:** `Haitao999/things-eeg` (THINGS-EEG, Gifford et al. 2022; CVPR
-  2025 release by Wu et al.). Single subject (sub-01), 63 channels @ 250 Hz,
-  250-sample epochs. Train: 16 540 image-trials × 4 reps. Test: 200 concepts
-  × 80 reps.
-- **Frozen judge:** ViT-B/32 CLIP image/text features come precomputed in the
-  dataset, so we never invoke CLIP at runtime.
-- **Projector P:** depthwise temporal conv → channel-mix → 4-stage conv tower
-  → AvgPool → MLP → L2-norm. 5.8 M params.
-- **Codec:** 1D-conv autoencoder, latent (32 ch × 32 ts), factorized Laplace
-  prior for rate, uniform-noise quantizer at training, integer round at
-  inference.
+| Path | Role |
+|------|------|
+| `neurozip/data.py` | dataset loading / normalization |
+| `neurozip/clip_proj.py` | frozen CLIP + EEG→CLIP projector (the judge) |
+| `neurozip/codec.py` | autoencoder codec + task-aware loss |
+| `neurozip/train.py` | training (stage / λ / ratio flags) |
+| `neurozip/evaluate.py` | metrics + demo-asset generation |
+| `neurozip/cli.py` | ffmpeg-like command line |
+| `ui/demo.html` | self-contained demo page |
 
-## Numbers (sub-01, trial-averaged 80 reps; image-prompt retrieval, top-5 over 200 concepts)
+## License
 
-| codec          |  bpp  | ratio vs fp16 |  mse   | top-1 | top-5 | top-10 | held-out top-1 |
-|----------------|------:|--------------:|-------:|------:|------:|-------:|---------------:|
-| **raw EEG**    | 16.000|         1× |    —   | 13.5% | 37.5% | 50.5%  |       —        |
-| fidelity_low   | 0.080 |        199× | 0.0449 |  2.5% | 14.0% | 20.0%  |    53.0%       |
-| fidelity_med   | 0.154 |        104× | 0.0365 |  5.0% | 16.0% | 26.5%  |    85.5%       |
-| fidelity_high  | 0.206 |         78× | 0.0266 |  5.5% | 16.0% | 29.5%  |    82.0%       |
-| **neurozip_low**  | 0.092 |    175× | 0.0394 |  4.0% | **16.0%** | **28.5%** | **94.5%** |
-| **neurozip_med**  | 0.171 |     93× | 0.0366 |  5.5% | **19.5%** | **34.0%** | **96.0%** |
-| **neurozip_high** | 0.217 |     74× | 0.0246 |  6.0% | **22.5%** | **37.5%** | **99.5%** |
-
-Read it across rows: at every compression tier, NeuroZip preserves more of the
-raw EEG's retrievability than the fidelity codec, and the held-out classifier
-(an independent judge that the codec's loss never optimized against) is the
-strongest signal — NeuroZip jumps from ~85% (fidelity) to ~96–99% retained.
-
-Notably:
-- **At ~95× compression, NeuroZip matches the fidelity codec's top-5 from
-  ~104× and beats fidelity at every higher bpp tier the fidelity codec never
-  reaches.**
-- Fidelity_high *uses 2.5× more bits* than fidelity_low but plateaus at 16%
-  top-5 — pure rate doesn't buy retrievability. NeuroZip's curve keeps climbing.
-- Fidelity is slightly better on raw MSE (0.0246 vs 0.0266 for the high tier),
-  which is exactly the point: NeuroZip is *worse* on bit-by-bit fidelity yet
-  *better* on what the EEG is *about*.
-
-The money plot: `demo/assets/rate_retrieval.png`.
-
-## Run
-
-Two convenience scripts cover the common workflow:
-
-```bash
-# 1. one-shot: venv + dataset subset + all training stages (idempotent)
-./train.sh
-
-# 2. live demo (binds 0.0.0.0:8011 by default, LAN-visible)
-./serve.sh
-# then open http://<host>:8011/
-
-# variants
-./train.sh sweep_v3      # just the v3 attention-projector cascade
-./train.sh eval          # re-run evaluation + regenerate demo assets
-HOST=127.0.0.1 ./serve.sh   # local-only
-PORT=8000 ./serve.sh        # change port
-```
-
-If you prefer to invoke things by hand:
-
-```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/pip install -r requirements.txt
-bash scripts/download_data.sh        # ~3 GB targeted subset
-bash run_all.sh                       # all stages
-.venv/bin/python serve.py --host 0.0.0.0 --port 8011
-```
-
-Each stage is independently runnable:
-
-```bash
-.venv/bin/python data.py                 # Stage 0: load + summarize
-.venv/bin/python train.py proj           # Stage 1: train frozen judge
-.venv/bin/python train.py codec --out fidelity_med  # Stage 2: fidelity baseline
-.venv/bin/python train.py neurozip --out neurozip_med --init_from fidelity_med  # Stage 3
-.venv/bin/python train.py classifier     # Stage 4 circularity defense
-.venv/bin/python evaluate.py --models fidelity_med neurozip_med  # Stage 4 metrics + assets
-```
-
-## Files
-
-| file | purpose |
-|---|---|
-| `data.py` | THINGS-EEG dataset loader + per-channel normalization stats |
-| `clip_proj.py` | EEG → CLIP projector `P` (Stage 1 judge) |
-| `codec.py` | 1D-conv codec + factorized Laplace prior + noise/round quantizer |
-| `train.py` | CLI: `proj`, `codec`, `neurozip`, `classifier` |
-| `evaluate.py` | Matched-bpp comparison, plot, demo JSON, image copy |
-| `serve.py`  | Flask backend: live CLIP text encoding, on-demand codec reconstruction, server-rendered figures |
-| `demo.html` | Live demo (talks to `serve.py`) with free-text query + reconstruction viewer |
-| `run_all.sh` | End-to-end pipeline (idempotent — re-runs cheaply) |
-
-## The three easy-to-get-wrong spots
-
-Documented inline in code; reproduced here:
-
-1. **Gradient flow through the frozen judge.** `P` and CLIP are frozen
-   (`requires_grad_(False)` and `no_grad` on the target embedding) but the
-   decoder must still receive gradient through `P(EEĜ)`. `train.py`'s
-   `_grad_flow_assert()` runs once at Stage-3 startup and asserts (a) non-zero
-   decoder grad from a task-only backward, (b) zero judge grad.
-2. **Quantizer mismatch.** Train with additive `U(-0.5, 0.5)` noise (a
-   differentiable proxy for rounding); at inference use `torch.round`. Forget
-   the noise at training time and `round()` breaks at inference.
-3. **Normalization stats.** Per-channel mean/std are computed on train and
-   cached at `data/norm_stats.pt`. They're needed (a) to invert the codec
-   output to real microvolts for fidelity reporting, and (b) so bpp is
-   bits-per-normalized-sample comparable across configs.
-
-## Circularity defense
-
-The compressor is trained with `P` + CLIP in the loop. If we only ever
-evaluated retrieval with `P` + CLIP, "great numbers against your own judge" is
-a fair takedown. So `train.py classifier` trains a **separate** EEG→concept
-classifier on the test set's repetition splits (different epochs than what the
-codec saw at train time, and a fundamentally different judge — softmax over
-concepts, not contrastive against CLIP). `evaluate.py` reports its top-1 on
-the codec's decompressed EEG for every checkpoint, so you can verify that
-NeuroZip's win generalizes beyond the metric it was trained on.
-
-## Scope caveat
-
-THINGS-EEG epochs are short (1 s) trials, not long clinical recordings. The
-storage pressure NeuroZip addresses is **dataset-scale**: millions of labeled
-trial epochs of brain-image pairs. The Haitao release already re-stored EEG in
-float16 to halve size — that's evidence the storage pressure is real for
-exactly this kind of data.
-
-## Citation
-
-```bibtex
-@misc{neurozip2026,
-  title  = {NeuroZip: task-aware EEG compression for retrieval-preserving storage},
-  author = {Hackathon team},
-  year   = {2026},
-  note   = {Built same-day on THINGS-EEG.}
-}
-```
+[PolyForm Noncommercial License 1.0.0](LICENSE). The source is public and you may use,
+modify, and share it for any **noncommercial** purpose (personal, research, education,
+nonprofit). **Selling it, or any commercial use, is not permitted.** This is a
+source-available license, not an OSI "open source" license (which cannot forbid selling).

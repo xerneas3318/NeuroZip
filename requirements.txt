@@ -6,3 +6,4 @@ open_clip_torch
 huggingface_hub
 matplotlib
 flask>=3.0
+tqdm

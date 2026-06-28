@@ -1,35 +1,55 @@
-# Python
+# ---- NeuroZip private notes (do NOT commit) ----
+instructions.md
+
+# ---- Python ----
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
 .venv/
 venv/
+env/
+.python-version
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 
-# Data (~3 GB; users re-download via scripts/download_data.sh)
-data/
-
-# Trained model checkpoints (~190 MB; users regenerate via ./train.sh)
-# All .pt weights and per-codec training logs.
+# ---- ML artifacts / data ----
+# Weights/checkpoints (~190 MB; regenerate via ./train.sh)
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+checkpoints/
 checkpoints/*.pt
 checkpoints/*.json
 data/norm_stats.pt
+runs/
+wandb/
+# Data (~3 GB; users re-download via scripts/download_data.sh)
+data/
+datasets/
+demo_assets/
 
-# Logs
+# ---- NeuroZip archives (CLI output) ----
+*.nz
+
+# ---- Logs ----
+*.log
 logs/*.log
 logs/
 
-# OS junk
+# ---- OS / editor ----
 .DS_Store
 Thumbs.db
-
-# Editor / IDE
 .idea/
 .vscode/
 *.swp
 
-# Local-only
+# ---- Local-only ----
 /tmp/
 *.tmp

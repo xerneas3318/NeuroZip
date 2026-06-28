@@ -35,6 +35,22 @@ case "${1:-all}" in
   sweep_v3|v3)
     bash scripts/train_v3_chain.sh
     ;;
+  sweep_v4|v4)
+    # Conv-only codecs against the attention judge (cleanest NeuroZip story).
+    if [[ ! -f checkpoints/clip_proj.pt ]]; then
+      $PY train.py proj --epochs 40 --batch 512 --hidden 192 --lr 5e-4 \
+          --n_attn 2 --attn_heads 4 2>&1 | tee logs/proj.log
+    fi
+    bash scripts/train_sweep_v4.sh
+    if [[ ! -f checkpoints/holdout_classifier.pt ]]; then
+      $PY train.py classifier --epochs 25 --steps_per_epoch 200 --batch 256 \
+          --group 10 --n_attn 2 --attn_heads 4 2>&1 | tee logs/holdout.log
+    fi
+    $PY evaluate.py --models \
+        fidelity_v4_low fidelity_v4_med fidelity_v4_high fidelity_v4_xhigh \
+        neurozip_v4_low neurozip_v4_med neurozip_v4_high neurozip_v4_xhigh \
+        2>&1 | tee logs/eval_v4.log
+    ;;
   proj_only)
     $PY train.py proj --epochs 40 --batch 512 --hidden 192 --lr 5e-4 \
         --n_attn 2 --attn_heads 4 2>&1 | tee logs/proj.log
@@ -47,7 +63,7 @@ case "${1:-all}" in
     ;;
   *)
     echo "unknown subcommand: $1"
-    echo "valid: all | sweep_v2 | sweep_v3 | proj_only | eval"
+    echo "valid: all | sweep_v2 | sweep_v3 | sweep_v4 | proj_only | eval"
     exit 2
     ;;
 esac

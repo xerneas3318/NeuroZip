@@ -80,8 +80,23 @@
     </div>
   </section>
 
+  <!-- Tabs -->
+  <nav role="tablist" style="display:flex;gap:4px;background:#fff;border:1px solid #e3e6ee;border-radius:10px;padding:5px;align-self:flex-start;">
+    <button id="tab-btn-demo" role="tab" aria-selected="true" data-tab="demo"
+      style="padding:9px 18px;border-radius:7px;border:none;background:#161a22;color:#fff;font:inherit;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:.01em;">
+      Inference demo
+    </button>
+    <button id="tab-btn-workspace" role="tab" aria-selected="false" data-tab="workspace"
+      style="padding:9px 18px;border-radius:7px;border:none;background:transparent;color:#4b5263;font:inherit;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:.01em;">
+      Codec workspace
+    </button>
+    <span style="margin-left:auto;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b92a4;align-self:center;">
+      same backend · same checkpoints
+    </span>
+  </nav>
+
   <!-- Codec workspace -->
-  <section style="background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+  <section id="tab-workspace" role="tabpanel" style="display:none;background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">
       <div style="display:flex;align-items:baseline;gap:12px;">
         <h2 style="font-size:14px;font-weight:600;margin:0;">Codec workspace</h2>
@@ -173,6 +188,9 @@
       </div>
     </div>
   </section>
+
+  <!-- ===== Inference-demo tab ===== -->
+  <div id="tab-demo" role="tabpanel" style="display:flex;flex-direction:column;gap:14px;">
 
   <!-- Main grid -->
   <section style="display:grid;grid-template-columns:1.55fr 1fr;gap:14px;align-items:start;">
@@ -290,6 +308,8 @@
     </div>
   </section>
 
+  </div><!-- /#tab-demo -->
+
   <footer style="color:#8b92a4;font-size:11px;font-family:'IBM Plex Mono',monospace;text-align:center;padding:2px 0 4px;">
     THINGS-EEG (Gifford 2022; Wu CVPR 2025) · CLIP ViT-B-32 / laion2b_s34b_b79k · live inference via serve.py · see ARCHITECTURE.md
   </footer>
@@ -301,6 +321,27 @@
   const fmtPct = (x, d=1) => (x == null ? "—" : (100*x).toFixed(d) + "%");
   const fmtBytes = (n) => n == null ? "—" : (n >= 1024 ? (n/1024).toFixed(1) + " KB" : n + " B");
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // ---------- tab switching ----------
+  function switchTab(name) {
+    const isDemo = (name !== "workspace");
+    document.getElementById("tab-demo").style.display       = isDemo ? "flex" : "none";
+    document.getElementById("tab-workspace").style.display  = isDemo ? "none" : "block";
+    for (const btn of document.querySelectorAll('[role="tab"]')) {
+      const on = btn.dataset.tab === (isDemo ? "demo" : "workspace");
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.style.background = on ? "#161a22" : "transparent";
+      btn.style.color      = on ? "#fff"    : "#4b5263";
+    }
+    // Reflect in URL hash so deep-linking works.
+    const target = isDemo ? "#demo" : "#workspace";
+    if (location.hash !== target) history.replaceState(null, "", target);
+  }
+  document.getElementById("tab-btn-demo").addEventListener("click", () => switchTab("demo"));
+  document.getElementById("tab-btn-workspace").addEventListener("click", () => switchTab("workspace"));
+  window.addEventListener("hashchange", () => switchTab(location.hash.replace(/^#/, "")));
+  // Initial tab from URL hash, default to demo.
+  switchTab(location.hash.replace(/^#/, "") || "demo");
 
   // ---------- bootstrap ----------
   const [models, conceptsResp, baseline] = await Promise.all([

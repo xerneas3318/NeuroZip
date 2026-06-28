@@ -101,7 +101,8 @@ def api_info():
     e = tier(ti)
     return jsonify({"L": d["L"], "acc": d["acc"], "mse": d["mse"], "mismatches": d["mism"],
                     "bits_per_residue": e["fv"]["bits_per_residue"], "ratio": e["ratio"],
-                    "bytes": e["bytes"], "seq_o": seq_o, "seq_r": seq_r, "mm": mm})
+                    "orig_bytes": SRC_BITS / 8, "comp_bytes": e["bytes"], "seq_bytes": d["L"],
+                    "seq_o": seq_o, "seq_r": seq_r, "mm": mm})
 
 
 def _png(fig):
@@ -162,13 +163,14 @@ function mark(seq,mm){{const s=new Set(mm);return [...seq].map((c,p)=>s.has(p)?`
 async function info(i,ti){{const d=await (await fetch('/api/info?idx='+i+'&tier='+ti)).json();
  const t=TIERS[ti]||{{}};
  document.getElementById('stats').innerHTML=
+  `<div class=cell><div class=v>${{(d.orig_bytes/1000).toFixed(1)}} KB</div><div class=k>original size (fp16 one-hot)</div></div>`+
+  `<div class=cell><div class="v us">${{d.comp_bytes.toFixed(0)}} B</div><div class=k>compressed size</div></div>`+
+  `<div class=cell><div class="v us">${{d.ratio.toFixed(0)}}×</div><div class=k>smaller (vs fp16)</div></div>`+
   `<div class=cell><div class="v us">${{(d.acc*100).toFixed(1)}}%</div><div class=k>per-residue accuracy</div></div>`+
   `<div class=cell><div class=v>${{d.mse.toFixed(4)}}</div><div class=k>recon MSE (one-hot)</div></div>`+
   `<div class=cell><div class=v>${{d.mismatches}}</div><div class=k>mismatched residues</div></div>`+
-  `<div class=cell><div class="v us">${{d.ratio.toFixed(0)}}×</div><div class=k>compression vs fp16</div></div>`+
   `<div class=cell><div class=v>${{d.bits_per_residue.toFixed(2)}}</div><div class=k>bits / residue</div></div>`+
-  `<div class=cell><div class=v>${{d.bytes.toFixed(0)}} B</div><div class=k>bytes / protein</div></div>`+
-  `<div class=cell><div class=v>${{d.L}}</div><div class=k>length (residues)</div></div>`;
+  `<div class=cell><div class=v>${{d.L}} aa</div><div class=k>length (≈${{d.seq_bytes}} B as text)</div></div>`;
  document.getElementById('seqo').innerHTML=mark(d.seq_o,d.mm);
  document.getElementById('seqr').innerHTML=mark(d.seq_r,d.mm);
  document.getElementById('tierlab').textContent=(t.label||'')+' · '+(t.ratio?t.ratio.toFixed(0)+'×':'');}}

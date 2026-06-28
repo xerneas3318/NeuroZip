@@ -24,6 +24,7 @@ Task-aware neural compression of single-trial EEG. The codec is trained to prese
   - [Projector](#projector)
   - [Codecs](#codecs)
   - [Rate-distortion trade-off](#rate-distortion-trade-off)
+  - [Reconstruction examples](#reconstruction-examples)
   - [Storage](#storage)
 - [Repository layout](#repository-layout)
 - [Reproduction](#reproduction)
@@ -33,7 +34,9 @@ Task-aware neural compression of single-trial EEG. The codec is trained to prese
 
 ## Abstract
 
-EEG datasets that pair brain responses with stimuli are large and growing, and are commonly stored at reduced precision (float16). Standard lossy codecs minimize mean squared error (MSE), which does not preserve the signal components that carry stimulus identity. NeuroZip adds a task-aware term to the rate-distortion objective: the reconstructed epoch is projected into CLIP space by a frozen EEG-to-CLIP projector, and the codec is penalized by the cosine distance between that projection and the CLIP image embedding of the presented stimulus. Gradient propagates through the frozen projector into the decoder. The fidelity baseline and the task-aware codec share architecture and training budget and differ only in the weight of the task term (`lambda_task` = 0 versus 3.0); observed differences are therefore attributable to the objective rather than to model capacity. On THINGS-EEG (subject `sub-01`), the task-aware codec improves top-5 image-prompt retrieval by 4 to 11 percentage points over the fidelity baseline at matched bitrate, at a cost of at most 5 percent in reconstruction MSE.
+NeuroZip is a task-aware neural codec for single-trial EEG. The codec is trained to preserve the decodable semantic content of each epoch, defined as the CLIP embedding of the viewed stimulus, rather than to minimize waveform reconstruction error. A frozen EEG-to-CLIP projector scores whether stimulus identity survives compression, and the codec is trained against that score; gradient propagates through the frozen projector into the decoder. The fidelity baseline and the task-aware codec share architecture and training budget and differ only in the weight of the task term (`lambda_task` = 0 versus 3.0), so observed differences are attributable to the objective rather than to model capacity.
+
+Two results follow on THINGS-EEG (subject `sub-01`). First, the compressed corpus remains searchable by natural language: a free-text query returns the epochs recorded while the subject viewed the corresponding object, although the model is never trained on text. At matched bitrate the task-aware codec improves top-5 image-prompt retrieval by 4 to 11 percentage points over the fidelity baseline, at a cost of at most 5 percent in reconstruction MSE. Second, because the objective retains only stimulus-decodable content, aggressive compression acts as an instrument for localizing task-relevant signal: at 144x compression the preserved information concentrates at occipitotemporal electrodes around the N170 (150 to 200 ms), and an independently trained classifier identifies the viewed object with 100 percent accuracy, versus 88 percent for the fidelity baseline. Object identity in single-subject EEG is therefore low-dimensional, spatially and temporally localized, and robust to compression.
 
 ## Method
 
@@ -120,6 +123,26 @@ At matched tiers, the task-aware codec increases reconstruction MSE by at most 5
 | xhigh | 0.250 / 0.248 | 64x / 64x | +4.0 pp |
 
 [`demo/assets/rate_retrieval.png`](demo/assets/rate_retrieval.png) plots top-5 retrieval against bits per sample for both families.
+
+### Reconstruction examples
+
+A held-out trial-averaged epoch reconstructed by both codecs at the high tier. The two codecs reach near-identical reconstruction error (MSE 0.0207 for the task-aware codec, 0.0201 for the fidelity baseline), consistent with the shared architecture; the methods differ in retrievability rather than in waveform fidelity.
+
+<p align="center"><img src="images/reconstruction_heatmaps.png" width="560" alt="Raw EEG and the task-aware and fidelity decompressions, per channel and time" /></p>
+
+Raw EEG (top) and the two decompressions, normalized amplitude per channel and time.
+
+<p align="center"><img src="images/error_heatmaps.png" width="640" alt="Absolute reconstruction error per channel and time for both codecs, with per-epoch MSE" /></p>
+
+Absolute reconstruction error per channel and time, with per-epoch MSE annotated.
+
+<p align="center"><img src="images/per_channel_waveforms.png" width="560" alt="Per-channel waveforms for six electrodes, raw versus both codecs" /></p>
+
+Per-channel waveforms for six electrodes; both codecs track the raw trace.
+
+<p align="center"><img src="images/latent_codes.png" width="560" alt="Quantized integer latent codes for the two codecs" /></p>
+
+Quantized latent codes (32 latent channels by 32 latent timesteps) for the two codecs.
 
 ### Storage
 

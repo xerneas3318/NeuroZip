@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NeuroZip</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Web fonts removed: gov look uses system Arial / Verdana / Courier New. -->
 <style>
   html, body { margin: 0; background: #eef0f4; }
   * { box-sizing: border-box; }
@@ -113,6 +111,237 @@
   /* gentle pulse for status pills */
   .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+  /* =========================================================================
+     2000s GOVERNMENT-WEBSITE OVERRIDE
+     Hard corners, no shadows, no bubbles. Arial/Verdana body, Courier mono.
+     Navy + cream + black + government red. Native form chrome.
+     ========================================================================= */
+  *, *::before, *::after { border-radius: 0 !important; box-shadow: none !important; transition: none !important; }
+  body, button, input, select, textarea {
+    font-family: Arial, Verdana, "Helvetica Neue", sans-serif !important;
+    font-size: 13px !important; letter-spacing: 0 !important;
+  }
+  body { background: #f4f0e6 !important; color: #000 !important; line-height: 1.4 !important; -webkit-font-smoothing: subpixel-antialiased !important; }
+  /* Monospace falls back to Courier New */
+  [style*="IBM Plex Mono"], [style*="monospace"] { font-family: "Courier New", Courier, monospace !important; }
+
+  /* Top-of-page status banner (the .vault-title block in sidebar mirrors this) */
+  header {
+    background: #003366 !important;
+    border: 2px solid #002244 !important;
+    color: #fff !important;
+    padding: 8px 14px !important;
+  }
+  header > div > div { color: #fff !important; }
+  header span[style*="#b23b34"] { color: #ffcc33 !important; }
+  header [style*="#6b7280"] { color: #cbd5e1 !important; }
+  header [style*="#161a22"] { color: #fff !important; }
+  header [style*="border-left"] { border-color: #4a6280 !important; }
+
+  /* Cards / sections — flat white with hard black hairline */
+  main.content section, main.content .pane, main.content > div > div {
+    background: #fff !important;
+    border: 1px solid #000 !important;
+    padding-top: 0 !important;
+  }
+  main.content section { margin-bottom: 0 !important; }
+  main.content > section + section, main.content > nav + section { margin-top: 10px !important; }
+  /* Restore inner padding for top-level cards but preserve hard borders */
+  main.content > section, main.content > div > section, main.content > div > div[id^="tab-"] section {
+    padding: 0 !important;
+  }
+  /* Section heading bar — like a "form title" cell on a gov site */
+  main.content h2 {
+    background: #003366 !important;
+    color: #fff !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+    padding: 5px 12px !important;
+    margin: 0 0 0 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+  /* Give the section bodies their padding back (the H2 sits at top, body below) */
+  main.content section > *:not(h2):not(.section-band) { margin-left: 0 !important; }
+  main.content section > div, main.content section > p, main.content section > table {
+    padding: 12px 14px !important;
+  }
+  /* Eliminate that top flex hat with sub-headings — convert to single bar */
+  main.content section > div[style*="justify-content:space-between"][style*="align-items:baseline"] {
+    background: #f4f0e6 !important;
+    border-bottom: 1px solid #888 !important;
+    padding: 6px 12px !important;
+  }
+  main.content section > div[style*="justify-content:space-between"][style*="align-items:baseline"] h2 {
+    background: transparent !important;
+    color: #003366 !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Nav rail (the "Obsidian sidebar") → gov navigation: cream beige with navy header */
+  .sidebar {
+    background: #e8e2d0 !important;
+    border-right: 2px solid #003366 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  .sidebar .vault-title {
+    background: #003366 !important;
+    color: #fff !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    padding: 10px 14px 4px !important;
+    letter-spacing: 0 !important;
+  }
+  .sidebar .vault-title span { color: #ffcc33 !important; }
+  .sidebar .vault-sub {
+    background: #003366 !important;
+    color: #cbd5e1 !important;
+    padding: 0 14px 8px !important;
+    font-family: "Courier New", monospace !important;
+    font-size: 10px !important;
+    border-bottom: 2px solid #002244 !important;
+  }
+  .sidebar .section-label {
+    background: #c8c0a8 !important;
+    color: #003366 !important;
+    border-top: 1px solid #aaa395 !important;
+    border-bottom: 1px solid #aaa395 !important;
+    padding: 4px 14px !important;
+    margin: 0 !important;
+    font-family: Arial, sans-serif !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    font-size: 10px !important;
+    letter-spacing: .06em !important;
+  }
+  .sidebar .nav-item {
+    color: #0033aa !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px dotted #aaa395 !important;
+    padding: 7px 14px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+  }
+  .sidebar .nav-item:hover { background: #f2eedf !important; color: #002277 !important; }
+  .sidebar .nav-item.active { background: #003366 !important; color: #ffcc33 !important; text-decoration: none !important; font-weight: bold !important; }
+  .sidebar .nav-item .meta { font-family: "Courier New", monospace !important; opacity: .6 !important; }
+  .sidebar .sb-kpi {
+    background: #fff !important;
+    border-bottom: 1px solid #888 !important;
+    padding: 6px 12px !important;
+  }
+  .sidebar .sb-kpi .k { font-family: Arial, sans-serif !important; color: #555 !important; font-weight: normal !important; letter-spacing: 0 !important; text-transform: none !important; font-size: 10.5px !important; }
+  .sidebar .sb-kpi .v { font-family: "Courier New", monospace !important; color: #000 !important; font-weight: bold !important; font-size: 17px !important; }
+  .sidebar .sb-kpi .sub { font-family: "Courier New", monospace !important; color: #666 !important; font-size: 10px !important; }
+  .sidebar .vault-foot {
+    background: #003366 !important;
+    color: #cbd5e1 !important;
+    font-family: "Courier New", monospace !important;
+    padding: 8px 14px !important;
+    margin-top: 0 !important;
+    border-top: 2px solid #002244 !important;
+  }
+
+  /* Form chrome — native, no bubbles */
+  button {
+    border: 1px solid #555 !important;
+    background: linear-gradient(#fafafa, #e2e2e2) !important;
+    color: #000 !important;
+    padding: 4px 12px !important;
+    font-weight: normal !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+  }
+  button:hover:not(:disabled) { background: linear-gradient(#fff, #d0d0d0) !important; border-color: #000 !important; }
+  button:active:not(:disabled) { background: #c8c8c8 !important; }
+  button:disabled { color: #999 !important; background: #ececec !important; border-color: #ccc !important; }
+  /* The two primary action buttons (Compress / Decompress / Retrieve / Random)
+     get the classic gov blue */
+  #comp-btn, #go { background: #003366 !important; color: #fff !important; border: 1px solid #001a33 !important; font-weight: bold !important; }
+  #comp-btn:hover:not(:disabled), #go:hover { background: #004488 !important; }
+  #dec-btn { background: #555 !important; color: #fff !important; border: 1px solid #222 !important; font-weight: bold !important; }
+  #dec-btn:hover:not(:disabled) { background: #777 !important; }
+  input[type=text], select {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 3px 6px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+  }
+  input[type=text]:focus, select:focus { border-color: #003366 !important; outline: 1px solid #003366 !important; outline-offset: -1px !important; }
+  input[type=range] { accent-color: #003366 !important; }
+
+  /* Links: underlined, blue */
+  a { color: #0033aa !important; text-decoration: underline !important; }
+  a:visited { color: #551a8b !important; }
+
+  /* Drop zones: solid dashed, gov-ish */
+  #comp-drop, #dec-drop {
+    border: 2px dashed #555 !important;
+    background: #fafaf2 !important;
+  }
+  #comp-drop:hover, #dec-drop:hover { background: #fff8d6 !important; }
+
+  /* Cards within sections (the inner compress/decompress workspace blocks) */
+  main.content section section,
+  main.content section > div > div[style*="border:1px solid #e9ecf3"],
+  main.content section > div > div[style*="background:#fafbfd"] {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+  }
+
+  /* All-codecs table → real ruled table */
+  table.codec-table, #codec-table {
+    border: 1px solid #000 !important;
+    background: #fff !important;
+  }
+  #codec-table th { background: #003366 !important; color: #fff !important; border: 1px solid #002244 !important; font-family: Arial, sans-serif !important; }
+  #codec-table td { border: 1px solid #ccc !important; font-family: "Courier New", monospace !important; }
+  tr.codec-row:hover td { background: #fff8d6 !important; }
+
+  /* Tabs — file-folder style without the rounding */
+  nav[role="tablist"] { background: transparent !important; border: none !important; padding: 0 !important; }
+
+  /* KPI mini-cells in the original strip area (now in sidebar; harmless if not present) */
+  .kpi-grid, .kpi-cell { border: 1px solid #000 !important; }
+
+  /* Retrieval result cards (NeuroZip / Fidelity panes) */
+  .panes > div, [id^="gt-"], #gt-nzn, #gt-fid {
+    background: #fff !important;
+    border: 1px solid #888 !important;
+  }
+  /* Retrieved image cards */
+  #grid-nzn > div, #grid-fid > div {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+  }
+  #grid-nzn > div.ring-gold, #grid-fid > div.ring-gold { border: 2px solid #2a7a35 !important; }
+  #grid-nzn > div.ring-selected, #grid-fid > div.ring-selected { border: 2px solid #b00 !important; }
+
+  /* Reconstruction-viewer figure cells */
+  .fig-img { background: #000 !important; border: 1px solid #555 !important; cursor: zoom-in !important; }
+  .fig-img:hover { transform: none !important; }
+
+  /* Lightbox — keep dim background but lose the rounding */
+  .lightbox img { background: #000 !important; }
+  .lightbox .lb-close { font-family: Arial, sans-serif !important; }
+
+  /* Footer */
+  footer { background: #003366 !important; color: #cbd5e1 !important; padding: 8px 14px !important; border-top: 2px solid #002244 !important; font-family: "Courier New", monospace !important; text-align: left !important; }
+
+  /* Tabbed-page wrappers shouldn't double-border with their children */
+  #tab-demo, #tab-workspace { background: transparent !important; border: none !important; padding: 0 !important; }
+  #tab-demo > section, #tab-workspace { display: block !important; }
 </style>
 </head>
 <body>

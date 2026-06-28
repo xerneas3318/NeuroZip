@@ -33,7 +33,9 @@ def main():
     device = torch.device(args.device)
 
     tr_ds = ThingsEEG(split="train")                        # single trials, normalized
-    tr = torch.from_numpy(tr_ds.eeg).float()                # (66160, 63, 250) on CPU
+    # Resident on the GPU (~4 GB) to avoid per-batch host->device copies that
+    # starve the GPU and throttle the CPU.
+    tr = torch.from_numpy(tr_ds.eeg).float().to(device)     # (66160, 63, 250)
     te = ThingsEEG(split="test").trial_averaged()[0].to(device)
     print(f"v4 protocol: single-trial train {tuple(tr.shape)} std={tr.std():.3f} "
           f"| trial-avg test {tuple(te.shape)} std={te.std():.3f}")
@@ -57,9 +59,9 @@ def main():
     best = (1e9, 0, 0)
     for epoch in range(1, args.epochs + 1):
         codec.train(); t0 = time.time(); rm = 0.0; nb = 0
-        idx = torch.randperm(N, generator=gen)
+        idx = torch.randperm(N, generator=gen).to(device)
         for i in range(0, N - args.batch_size + 1, args.batch_size):
-            x = tr[idx[i:i+args.batch_size]].to(device, non_blocking=True)
+            x = tr[idx[i:i+args.batch_size]]
             xh, bps, _ = codec(x)
             loss = F.mse_loss(xh, x) + args.lambda_rate * bps * per_sample
             opt.zero_grad(set_to_none=True); loss.backward()

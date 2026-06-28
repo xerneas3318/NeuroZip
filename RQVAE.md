@@ -28,6 +28,25 @@ learned/data-adaptive instead of uniform rounding. Rate is set by `--num-quantiz
 3.5× lower MSE than the README at matched compression. Trained on the full
 averaged train split (16,540 images) with scale augmentation.
 
+## Benchmark over rian's v4
+
+`train_v4.py` reproduces rian's v4 fidelity codec faithfully (conv-only EEGCodec,
+`n_attn=0`, c_lat=32, **single-trial** training, 15 epochs) and evaluates it on
+the same trial-averaged test MSE. All at matched ~65–72× compression:
+
+| model | protocol | MSE | var-explained | ratio |
+|---|---|---|---|---|
+| **v4 (rian)** | single-trial, conv-only | 0.0259 | 27% | 64× |
+| **RQ-VAE (ours)** | averaged + scale-aug, residual-VQ | **0.0064** | **80%** | 72× |
+| fidelity (ours) | averaged + scale-aug, scalar | 0.0058 | 79% | 67× |
+
+**RQ-VAE is ~4× lower MSE than v4** (`results/benchmark_vs_v4.png`). v4 reproduces
+rian's README (their fidelity_high = 0.0266 @ 78×). The gap is mostly the training
+protocol: v4 trains on single trials (magnitude ~1.0) but is scored on trial-
+averaged EEG (magnitude ~0.19), so it over-shoots amplitude (27% variance, near
+zero); our averaged + scale-augmented training fixes that magnitude gap. The
+viewer shows all three side by side with per-image MSE.
+
 ## Run
 
 ```bash

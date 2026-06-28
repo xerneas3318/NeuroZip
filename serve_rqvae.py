@@ -210,6 +210,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rqvae", default="checkpoints/codec_rqvae_72x.pt")
     ap.add_argument("--fidelity", default="checkpoints/codec_fidelity_72x.pt")
+    ap.add_argument("--v4", default="checkpoints/codec_v4_fidelity.pt", help="rian's v4 conv codec")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8011)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -220,6 +221,8 @@ def main():
         models["RQ-VAE"] = load_any(args.rqvae, device)
     if os.path.exists(args.fidelity):
         models["fidelity"] = load_any(args.fidelity, device)
+    if os.path.exists(args.v4):
+        models["v4 (rian)"] = load_any(args.v4, device)
     assert models, "no checkpoints found"
     avg, texts, imgs = ThingsEEG(split="test").trial_averaged()
     head = models.get("RQ-VAE") or next(iter(models.values()))

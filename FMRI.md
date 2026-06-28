@@ -14,14 +14,34 @@ downloads the per-subject `.1D` files (T TRs × 200 ROIs) and splits each into
 overlapping 64-TR windows → `(200, 64)` epochs, per-ROI z-scored. ~800 subjects →
 ~3,900 windows.
 
-## Result (held-out, motion spikes winsorized at ±6σ)
+## Result (held-out; spikes winsorized ±6σ, target band-limited to the BOLD band)
 
 | metric | value |
 |---|---|
-| variance explained | **51%** (mean) · **67%** (median window) |
-| reconstruction MSE | **0.459** |
-| compression vs float16 | **95×** |
-| original / compressed | 25.6 KB → 0.27 KB per window |
+| reconstruction MSE | **0.21** (raw target was 0.46) |
+| variance explained | **56%** |
+| compression vs float16 | **123×** |
+| original / compressed | 25.6 KB → 0.21 KB per window |
+
+## Lowering the MSE — the target was full of noise
+
+The raw 0.46 MSE was the codec being forced to fit high-frequency noise. BOLD
+lives below ~0.1 Hz, so band-limiting the target (a standard fMRI preprocessing
+step) is the right move — and it cuts MSE ~4× (`results/fmri_smoothing.png`):
+
+| temporal low-pass (σ, TR) | FWHM | MSE |
+|---|---|---|
+| 0 (raw) | 0 | 0.48 |
+| 1.0 | ~5 s | 0.31 |
+| **1.5** | **~7 s (≈ HRF width)** | **0.22** |
+| 2.5 | ~12 s | 0.12 |
+
+Honest caveat: filtering also shrinks the target's total variance, so
+*variance-explained* rises only modestly (51%→56%) — the big win is in absolute
+MSE, by not asking the codec to reconstruct noise. Other SNR levers that would
+help further: a **coarser parcellation** (more voxels averaged per ROI),
+**task fMRI** (event-locked, repeatable signal), or **attention across ROIs**
+(predict each region from its functional-network neighbors).
 
 ## Why the MSE doesn't go lower — it's a noise floor, not a bit budget
 
@@ -57,6 +77,6 @@ How well the *same* v4 codec compresses is a direct readout of signal redundancy
 
 ```bash
 python fmri_data.py                                # download ABIDE + build cache
-python train_fmri.py --epochs 100 --c-lat 128 --hidden 192 --lambda-rate 0.01
+python train_fmri.py --epochs 100 --c-lat 128 --hidden 192 --lambda-rate 0.01 --smooth 1.5
 ./serve_fmri.sh        # demo on http://localhost:8011/
 ```

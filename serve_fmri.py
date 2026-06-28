@@ -149,7 +149,7 @@ def main():
     args = ap.parse_args()
     device = torch.device(args.device)
     model, ck = load_codec(args.ckpt, device)
-    _, val, _ = load_fmri()
+    _, val, _ = load_fmri(smooth_sigma=ck["config"].get("smooth", 0.0))
     S.update(model=model, va=torch.from_numpy(val).to(device), meta=ck)
     print(f"serving fMRI viewer on http://{args.host}:{args.port}/  "
           f"(ratio {ck['final_val']['ratio']:.0f}x, var {ck['final_val']['var_exp']*100:.0f}%)")

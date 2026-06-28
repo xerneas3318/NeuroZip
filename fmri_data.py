@@ -45,7 +45,7 @@ def build_cache(win=N_TIMES, stride=N_TIMES // 2, cache=CACHE):   # overlap -> m
     return W
 
 
-def load_fmri(val_frac=0.05, seed=0, rebuild=False, clip=6.0):
+def load_fmri(val_frac=0.05, seed=0, rebuild=False, clip=6.0, smooth_sigma=0.0):
     if rebuild or not os.path.exists(CACHE):
         W = build_cache()
     else:
@@ -61,6 +61,10 @@ def load_fmri(val_frac=0.05, seed=0, rebuild=False, clip=6.0):
     if clip:                       # winsorize motion spikes (standard fMRI scrubbing)
         train = np.clip(train, -clip, clip)
         val = np.clip(val, -clip, clip)
+    if smooth_sigma:               # temporal low-pass: BOLD is <0.1 Hz, high-freq is noise
+        from scipy.ndimage import gaussian_filter1d
+        train = gaussian_filter1d(train, smooth_sigma, axis=2)
+        val = gaussian_filter1d(val, smooth_sigma, axis=2)
     meta = {"n_train": len(train), "n_val": len(val), "n_roi": N_ROI, "n_times": N_TIMES,
             "mean": mean, "std": std}
     return train, val, meta

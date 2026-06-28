@@ -29,8 +29,10 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--out", default="checkpoints/codec_v4_fidelity.pt")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     device = torch.device(args.device)
+    torch.manual_seed(args.seed)
 
     tr_ds = ThingsEEG(split="train")                        # single trials, normalized
     # Resident on the GPU (~4 GB) to avoid per-batch host->device copies that
@@ -43,7 +45,7 @@ def main():
     codec = EEGCodec(c_lat=args.c_lat, hidden=args.hidden, n_attn=args.n_attn).to(device)
     per_sample = (args.c_lat * 32) / (N_CHANNELS * N_TIMES)
     opt = torch.optim.Adam(codec.parameters(), lr=args.lr)
-    gen = torch.Generator(device="cpu").manual_seed(0)
+    gen = torch.Generator(device="cpu").manual_seed(args.seed)
     N = tr.shape[0]
     print(f"v4 EEGCodec c_lat={args.c_lat} hidden={args.hidden} n_attn={args.n_attn} "
           f"params={sum(p.numel() for p in codec.parameters())}")

@@ -33,9 +33,11 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--commit", type=float, default=0.25)
     ap.add_argument("--out", default="checkpoints/codec_rqvae_v4proto.pt")
+    ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
     device = torch.device(args.device)
+    torch.manual_seed(args.seed)
 
     tr_ds = ThingsEEG(split="train")                            # single trials, normalized
     # Keep the whole single-trial set resident on the GPU (~4 GB) so the GPU
@@ -54,7 +56,7 @@ def main():
           f"ratio={ratio:.0f}x params={sum(p.numel() for p in codec.parameters())}")
 
     opt = torch.optim.Adam(codec.parameters(), lr=args.lr)
-    gen = torch.Generator(device="cpu").manual_seed(0)
+    gen = torch.Generator(device="cpu").manual_seed(args.seed)
     N = tr.shape[0]
 
     @torch.no_grad()

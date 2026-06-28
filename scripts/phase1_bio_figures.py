@@ -121,14 +121,22 @@ def fig_erp_timeline(fid_t: np.ndarray, nzn_t: np.ndarray, save_to: Path):
                  fontsize=12, color=INK, loc="left", pad=12)
     ax.legend(loc="upper right", fontsize=10, framealpha=0.9)
 
-    # Headline annotation
+    # Headline annotation: white opaque background so the text reads
+    # cleanly even when it sits over the ERP windows and data lines.
     fid_n170 = fid_t[(t_ms >= 150) & (t_ms <= 200)].mean()
     nzn_n170 = nzn_t[(t_ms >= 150) & (t_ms <= 200)].mean()
     pct = (fid_n170 - nzn_n170) / fid_n170 * 100
-    ax.annotate(f"N170 window:\n{pct:.1f}% lower MSE\nunder NeuroZip",
-                xy=(175, nzn_n170), xytext=(305, nzn_n170 - 0.008),
-                fontsize=10, color="#003366", fontweight="bold",
-                arrowprops=dict(arrowstyle="->", color="#003366", lw=1.2))
+    # Park the callout in the quiet post-400 ms region where neither curve
+    # is moving much, so the box doesn't sit on top of the action.
+    ax.annotate(f"N170 window:\nNeuroZip preserves it\n{pct:.1f}% better than fidelity",
+                xy=(175, nzn_n170), xytext=(520, ax.get_ylim()[1] * 0.62),
+                fontsize=10.5, color="#003366", fontweight="bold",
+                ha="left", va="center",
+                bbox=dict(boxstyle="round,pad=0.55",
+                          facecolor="white", edgecolor="#003366",
+                          linewidth=1.0, alpha=0.96),
+                arrowprops=dict(arrowstyle="-|>", color="#003366",
+                                lw=1.4, connectionstyle="arc3,rad=-0.18"))
     fig.tight_layout()
     fig.savefig(save_to, dpi=140); plt.close(fig)
 

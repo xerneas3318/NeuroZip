@@ -9,7 +9,7 @@ mismatches highlighted. A compression-tier slider swaps codecs.
 
 Run:  ./serve_protein.sh   # or python serve_protein.py --port 8011
 """
-import argparse, io, os
+import argparse, io, math, os
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -25,10 +25,12 @@ app = Flask(__name__)
 S = {}
 SRC_BITS = 20 * 250 * 16
 
-TIERS = [   # ordered by compression ratio (fidelity -> compression)
-    ("high fidelity", "checkpoints/protein_lr0.02.pt"),
-    ("medium",        "checkpoints/protein_lr0.1.pt"),
-    ("high compression", "checkpoints/protein_lr0.5.pt"),
+BITS_PER_AA = math.log2(20)            # 4.32 — info-optimal "packed" protein storage
+
+TIERS = [   # compared against REAL protein storage (FASTA / packed), not the one-hot.
+    ("high fidelity", "checkpoints/protein_lr0.1.pt"),
+    ("balanced",      "checkpoints/protein_lr0.5.pt"),
+    ("aggressive (lossy)", "checkpoints/protein_clat4.pt"),
 ]
 
 CSS = """
@@ -39,7 +41,7 @@ CSS = """
 h1{margin:0;font-size:1.7em;letter-spacing:-.5px}h1 span{color:var(--accent)}.sub{color:var(--ink-2);margin:2px 0 0}
 .stats{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
 .cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 16px;box-shadow:var(--shadow);min-width:120px}
-.cell .v{font-size:1.35em;font-weight:700}.cell .v.us{color:var(--accent)}.cell .k{color:var(--ink-muted);font-size:.74em;text-transform:uppercase;letter-spacing:.5px}
+.cell .v{font-size:1.35em;font-weight:700}.cell .v.us{color:var(--accent)}.cell .v.bad{color:var(--bad)}.cell .k{color:var(--ink-muted);font-size:.74em;text-transform:uppercase;letter-spacing:.5px}
 .controls{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
 .tierbox{flex:1;min-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;box-shadow:var(--shadow)}
 .tierbox label{color:var(--ink-muted);font-size:.78em;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
@@ -75,12 +77,14 @@ def _compute(ti, i):
         y = torch.round(m.encoder(x))                 # latent codes
         logits = m.decoder(y)
         probs = F.softmax(logits, 1)
+        bps = float(m.prior.bits(y).cpu())            # bits/symbol for THIS protein
+    comp_bits = bps * m.c_lat * 32                     # codec output = c_lat*32 symbols (fixed)
     gold = idx[0].cpu().numpy(); pred = logits.argmax(1)[0].cpu().numpy()
     mask = gold != PAD
     acc = float((pred[mask] == gold[mask]).mean())
     mse = float(((x[0] - probs[0]) ** 2)[:, :L].mean().cpu())
     return {"L": L, "x": x[0].cpu().numpy(), "lat": y[0].cpu().numpy(),
-            "probs": probs[0].cpu().numpy(), "pred": pred, "gold": gold,
+            "probs": probs[0].cpu().numpy(), "pred": pred, "gold": gold, "comp_bits": comp_bits,
             "acc": acc, "mse": mse, "mism": int((pred[mask] != gold[mask]).sum())}
 
 
@@ -98,10 +102,15 @@ def api_info():
     seq_o = "".join(AA_ORDER[a] for a in d["gold"][:d["L"]])
     seq_r = "".join(AA_ORDER[a] if a < 20 else "-" for a in d["pred"][:d["L"]])
     mm = [p for p in range(d["L"]) if d["gold"][p] != d["pred"][p]]
-    e = tier(ti)
-    return jsonify({"L": d["L"], "acc": d["acc"], "mse": d["mse"], "mismatches": d["mism"],
-                    "bits_per_residue": e["fv"]["bits_per_residue"], "ratio": e["ratio"],
-                    "orig_bytes": SRC_BITS / 8, "comp_bytes": e["bytes"], "seq_bytes": d["L"],
+    L = d["L"]
+    comp_bytes = d["comp_bits"] / 8
+    fasta_bytes = float(L)                              # FASTA / 1 byte per residue
+    packed_bytes = L * BITS_PER_AA / 8                  # info-optimal packed (4.32 bits/residue)
+    return jsonify({"L": L, "acc": d["acc"], "mse": d["mse"], "mismatches": d["mism"],
+                    "bits_per_residue": d["comp_bits"] / L, "comp_bytes": comp_bytes,
+                    "fasta_bytes": fasta_bytes, "packed_bytes": packed_bytes,
+                    "ratio_fasta": fasta_bytes / comp_bytes, "ratio_packed": packed_bytes / comp_bytes,
+                    "beats_fasta": comp_bytes < fasta_bytes, "beats_packed": comp_bytes < packed_bytes,
                     "seq_o": seq_o, "seq_r": seq_r, "mm": mm})
 
 
@@ -163,14 +172,14 @@ function mark(seq,mm){{const s=new Set(mm);return [...seq].map((c,p)=>s.has(p)?`
 async function info(i,ti){{const d=await (await fetch('/api/info?idx='+i+'&tier='+ti)).json();
  const t=TIERS[ti]||{{}};
  document.getElementById('stats').innerHTML=
-  `<div class=cell><div class=v>${{(d.orig_bytes/1000).toFixed(1)}} KB</div><div class=k>original size (fp16 one-hot)</div></div>`+
-  `<div class=cell><div class="v us">${{d.comp_bytes.toFixed(0)}} B</div><div class=k>compressed size</div></div>`+
-  `<div class=cell><div class="v us">${{d.ratio.toFixed(0)}}×</div><div class=k>smaller (vs fp16)</div></div>`+
+  `<div class=cell><div class=v>${{d.fasta_bytes.toFixed(0)}} B</div><div class=k>original (FASTA, 1 B/residue)</div></div>`+
+  `<div class=cell><div class="v us">${{d.comp_bytes.toFixed(0)}} B</div><div class=k>compressed (ours)</div></div>`+
+  `<div class=cell><div class="v ${{d.beats_fasta?'us':'bad'}}">${{d.ratio_fasta.toFixed(2)}}×</div><div class=k>smaller than FASTA</div></div>`+
   `<div class=cell><div class="v us">${{(d.acc*100).toFixed(1)}}%</div><div class=k>per-residue accuracy</div></div>`+
-  `<div class=cell><div class=v>${{d.mse.toFixed(4)}}</div><div class=k>recon MSE (one-hot)</div></div>`+
-  `<div class=cell><div class=v>${{d.mismatches}}</div><div class=k>mismatched residues</div></div>`+
   `<div class=cell><div class=v>${{d.bits_per_residue.toFixed(2)}}</div><div class=k>bits / residue</div></div>`+
-  `<div class=cell><div class=v>${{d.L}} aa</div><div class=k>length (≈${{d.seq_bytes}} B as text)</div></div>`;
+  `<div class=cell><div class=v>${{d.packed_bytes.toFixed(0)}} B</div><div class=k>info-optimal floor (4.32 b/res)</div></div>`+
+  `<div class=cell><div class=v>${{d.mismatches}}</div><div class=k>mismatched residues</div></div>`+
+  `<div class=cell><div class=v>${{d.L}} aa</div><div class=k>protein length</div></div>`;
  document.getElementById('seqo').innerHTML=mark(d.seq_o,d.mm);
  document.getElementById('seqr').innerHTML=mark(d.seq_r,d.mm);
  document.getElementById('tierlab').textContent=(t.label||'')+' · '+(t.ratio?t.ratio.toFixed(0)+'×':'');}}

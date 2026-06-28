@@ -35,7 +35,15 @@ Near-lossless reconstruction of real protein sequences:
 | metric | value |
 |---|---|
 | per-residue reconstruction accuracy | **99.5%** (chance = 5%) |
-| compression vs float16 one-hot | **71×** |
+| size vs **FASTA** (1 byte/residue, the real storage) | **smaller** — e.g. 237 B → 181 B (1.3×) |
+
+> Honest note on size: the one-hot input is a strawman (it's deliberately
+> redundant). Against the way proteins are actually stored — **FASTA, 1 byte per
+> residue** — the codec is genuinely smaller at ~99% accuracy. It does **not**
+> beat the information-theoretic floor (~4.32 bits/residue "packed"), and nothing
+> high-fidelity can: protein sequences are near-maximum-entropy (~4.2 bits/res),
+> so you only beat packed by sacrificing accuracy (c_lat=4 → 3.8 bits/res but 47%).
+> The viewer reports FASTA, packed, and the compressed size side by side.
 
 Reconstructed sequences are character-for-character matches
 (`results/protein_reconstruction.png`):

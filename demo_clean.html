@@ -198,7 +198,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
     <div class="eyebrow">task-aware EEG compression</div>
     <h1>Neuro<span>Zip</span></h1>
     <div class="lede">A neural codec trained so that what survives aggressive compression is the
-    CLIP-decodable semantic content of the EEG — not its waveform fidelity. The same
+    CLIP-decodable semantic content of the EEG - not its waveform fidelity. The same
     frozen judge that defines what to throw away is what makes the compressed corpus
     text-searchable at inference.</div>
   </header>
@@ -206,22 +206,22 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   <!-- Hero stat: retrieval lift, NeuroZip vs iso-rate fidelity -->
   <section class="hero-stat" id="hero">
     <div class="hero-card us">
-      <div class="label">NeuroZip <span class="tip" id="hero-us-name" data-tip="Click in the retrieval section to see this codec evaluated live." style="font-family:monospace;color:var(--ink-2);margin-left:8px">—</span></div>
-      <div class="num us" id="hero-us-top5">—</div>
+      <div class="label">NeuroZip <span class="tip" id="hero-us-name" data-tip="Click in the retrieval section to see this codec evaluated live." style="font-family:monospace;color:var(--ink-2);margin-left:8px"> - </span></div>
+      <div class="num us" id="hero-us-top5"> - </div>
       <div class="stat"><b class="tip" data-tip="Top-5 image-prompt retrieval: chance the correct concept is among the 5 nearest EEG epochs in CLIP space, averaged over all 200 test concepts. Chance level = 2.5%.">top-5 retrieval</b> over 200 concepts</div>
-      <div class="stat-sub" id="hero-us-detail" style="margin-top:var(--space-3);font-weight:600;color:var(--ok)">—</div>
+      <div class="stat-sub" id="hero-us-detail" style="margin-top:var(--space-3);font-weight:600;color:var(--ok)"> - </div>
     </div>
     <div class="hero-card them">
-      <div class="label">Fidelity baseline <span class="tip" data-tip="Same codec architecture as NeuroZip; trained with only rate + reconstruction MSE. No task loss." style="font-family:monospace;color:var(--ink-2);margin-left:8px" id="hero-them-name">—</span></div>
-      <div class="num them" id="hero-them-top5">—</div>
+      <div class="label">Fidelity baseline <span class="tip" data-tip="Same codec architecture as NeuroZip; trained with only rate + reconstruction MSE. No task loss." style="font-family:monospace;color:var(--ink-2);margin-left:8px" id="hero-them-name"> - </span></div>
+      <div class="num them" id="hero-them-top5"> - </div>
       <div class="stat">same architecture, MSE-only loss</div>
-      <div class="stat-sub" id="hero-them-detail" style="margin-top:var(--space-3)">—</div>
+      <div class="stat-sub" id="hero-them-detail" style="margin-top:var(--space-3)"> - </div>
     </div>
   </section>
 
   <!-- Context bar: how to read NeuroZip's number against chance / ceiling / SOTA -->
   <section class="context-bar">
-    <h3>How to read these numbers — top-5 retrieval, 200 concepts</h3>
+    <h3>How to read these numbers - top-5 retrieval, 200 concepts</h3>
     <div class="context-row" id="context-row">
       <div class="context-tick" id="ctx-chance">
         <div class="k">chance</div>
@@ -230,29 +230,29 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
       </div>
       <div class="context-tick" id="ctx-fid">
         <div class="k">fidelity baseline</div>
-        <div class="v">—</div>
+        <div class="v"> - </div>
         <div class="lbl">at NeuroZip's bpp (iso-rate)</div>
       </div>
       <div class="context-tick us" id="ctx-us">
         <div class="k">NeuroZip (ours, best tier)</div>
-        <div class="v">—</div>
-        <div class="lbl">— of raw EEG ceiling</div>
+        <div class="v"> - </div>
+        <div class="lbl"> - of raw EEG ceiling</div>
       </div>
       <div class="context-tick" id="ctx-raw">
         <div class="k">raw EEG ceiling</div>
-        <div class="v">—</div>
+        <div class="v"> - </div>
         <div class="lbl">no compression, our projector</div>
       </div>
       <div class="context-tick" id="ctx-sota">
         <div class="k">SOTA (reference)</div>
-        <div class="v">—</div>
+        <div class="v"> - </div>
         <div class="lbl">multi-subject, ~10–30M-param judges</div>
       </div>
     </div>
     <div class="context-strip-tip">
       <b style="color:var(--ink)">Why 37%-ish and not 90%?</b>
       EEG-to-image is a hard ML problem at this scale. Our raw projector (small, single-subject, 40 epochs) only reaches 42.5% top-5
-      on uncompressed EEG — that's the ceiling NeuroZip is preserving 83% of. SOTA judges with 10–30M params, multi-subject training, and 100+ epochs
+      on uncompressed EEG - that's the ceiling NeuroZip is preserving 83% of. SOTA judges with 10–30M params, multi-subject training, and 100+ epochs
       hit ~64–67% top-5; they don't tell you anything about codec quality (the codec contribution is invariant to judge strength),
       but they're what you'd want to plug in for a production system. See the <code>"Why are the numbers so low" </code> note in
       <code>results.md</code> for the full breakdown.
@@ -262,8 +262,8 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   <!-- Stat strip: project facts, no compression headline -->
   <div class="statstrip" id="statstrip">
     <div class="cell"><div class="k tip" data-tip="200 distinct object concepts in the THINGS-EEG test split (e.g. aardvark, accordion, basketball). Each concept has 80 EEG repetitions; we trial-average them at eval.">test concepts</div><div class="v">200</div><div class="sub">trial-avg 80 reps each</div></div>
-    <div class="cell"><div class="k tip" data-tip="Top-1 accuracy of the frozen projector P on raw uncompressed EEG. This is the ceiling — no compression. Every codec's top-1 should be read as a fraction of this.">judge ceiling (raw EEG)</div><div class="v">18.5%</div><div class="sub">top-1 over 200 concepts</div></div>
-    <div class="cell"><div class="k tip" data-tip="Codec generation. v4 = conv-only codec + attention projector + attention classifier. See ARCHITECTURE.md for the v1→v4 evolution.">codec generation</div><div class="v" id="ss-gen">—</div><div class="sub">conv codec + attn judge</div></div>
+    <div class="cell"><div class="k tip" data-tip="Top-1 accuracy of the frozen projector P on raw uncompressed EEG. This is the ceiling - no compression. Every codec's top-1 should be read as a fraction of this.">judge ceiling (raw EEG)</div><div class="v">18.5%</div><div class="sub">top-1 over 200 concepts</div></div>
+    <div class="cell"><div class="k tip" data-tip="Codec generation. v4 = conv-only codec + attention projector + attention classifier. See ARCHITECTURE.md for the v1→v4 evolution.">codec generation</div><div class="v" id="ss-gen"> - </div><div class="sub">conv codec + attn judge</div></div>
     <div class="cell"><div class="k tip" data-tip="Number of trainable parameters in one codec (encoder + decoder + factorized prior). Same for fidelity and NeuroZip.">codec params</div><div class="v">0.75M</div><div class="sub">fidelity and NeuroZip identical</div></div>
   </div>
 
@@ -294,7 +294,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
 
     <div class="controls-row" style="grid-template-columns: 1fr; margin-bottom: var(--space-4);">
       <div class="field">
-        <label>Compression tier <span id="tier-readout" style="float:right;color:var(--ink-muted);text-transform:none;letter-spacing:0;font-weight:400">—</span></label>
+        <label>Compression tier <span id="tier-readout" style="float:right;color:var(--ink-muted);text-transform:none;letter-spacing:0;font-weight:400"> - </span></label>
         <input id="tier" type="range" min="0" max="3" value="2" step="1" />
       </div>
     </div>
@@ -303,39 +303,39 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
       <div class="pane">
         <div class="pane-head">
           <div class="title"><span class="dot us"></span> NeuroZip</div>
-          <div class="badge" id="nzn-badge">—</div>
+          <div class="badge" id="nzn-badge"> - </div>
         </div>
         <div class="gt-row" id="gt-nzn">
           <div style="width:64px;height:64px;background:var(--surface);border-radius:6px"></div>
-          <div><div class="gt-label">ground truth</div><div class="gt-name">—</div></div>
+          <div><div class="gt-label">ground truth</div><div class="gt-name"> - </div></div>
         </div>
         <div class="grid" id="grid-nzn"></div>
         <div class="metrics-row" style="grid-template-columns:1fr 1fr;">
-          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts: chance the gold concept is in the 5 nearest decompressed-EEG embeddings. Chance level = 2.5%. This is the primary quality metric.">top-5 retrieval</span><span class="v us" id="nzn-t5">—</span></div>
-          <div class="metric"><span class="k tip" data-tip="Independent concept classifier accuracy on this codec's decompressed EEG. The classifier was trained on held-out reps and never sees codec output during its own training. High = an independent judge can still identify the concept = task content is preserved.">held-out judge</span><span class="v" id="nzn-hold">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts: chance the gold concept is in the 5 nearest decompressed-EEG embeddings. Chance level = 2.5%. This is the primary quality metric.">top-5 retrieval</span><span class="v us" id="nzn-t5"> - </span></div>
+          <div class="metric"><span class="k tip" data-tip="Independent concept classifier accuracy on this codec's decompressed EEG. The classifier was trained on held-out reps and never sees codec output during its own training. High = an independent judge can still identify the concept = task content is preserved.">held-out judge</span><span class="v" id="nzn-hold"> - </span></div>
         </div>
         <div style="margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--border);font-size:11px;color:var(--ink-muted);display:flex;justify-content:space-between;">
-          <span><span class="tip" data-tip="See the 'Compression footprint' section below for what this means and why NeuroZip's bpp is higher than fidelity's at the same tier.">compression footprint:</span> <b id="nzn-footprint">— bpp · — ×</b></span>
-          <span class="tip" data-tip="Mean squared reconstruction error on z-normalized EEG. Same units as the fidelity baseline. Within ±5% across both.">MSE <b id="nzn-mse-row">—</b></span>
+          <span><span class="tip" data-tip="See the 'Compression footprint' section below for what this means and why NeuroZip's bpp is higher than fidelity's at the same tier.">compression footprint:</span> <b id="nzn-footprint"> - bpp · - ×</b></span>
+          <span class="tip" data-tip="Mean squared reconstruction error on z-normalized EEG. Same units as the fidelity baseline. Within ±5% across both.">MSE <b id="nzn-mse-row"> - </b></span>
         </div>
       </div>
       <div class="pane">
         <div class="pane-head">
           <div class="title"><span class="dot them"></span> Fidelity baseline</div>
-          <div class="badge" id="fid-badge">—</div>
+          <div class="badge" id="fid-badge"> - </div>
         </div>
         <div class="gt-row" id="gt-fid">
           <div style="width:64px;height:64px;background:var(--surface);border-radius:6px"></div>
-          <div><div class="gt-label">ground truth</div><div class="gt-name">—</div></div>
+          <div><div class="gt-label">ground truth</div><div class="gt-name"> - </div></div>
         </div>
         <div class="grid" id="grid-fid"></div>
         <div class="metrics-row" style="grid-template-columns:1fr 1fr;">
-          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts. Chance level = 2.5%.">top-5 retrieval</span><span class="v" id="fid-t5">—</span></div>
-          <div class="metric"><span class="k tip" data-tip="Independent classifier accuracy on this codec's decompressed EEG. Saturating near 100% means the classifier can identify the concept; if low, content is being lost.">held-out judge</span><span class="v" id="fid-hold">—</span></div>
+          <div class="metric"><span class="k tip" data-tip="top-5 image-prompt retrieval over all 200 test concepts. Chance level = 2.5%.">top-5 retrieval</span><span class="v" id="fid-t5"> - </span></div>
+          <div class="metric"><span class="k tip" data-tip="Independent classifier accuracy on this codec's decompressed EEG. Saturating near 100% means the classifier can identify the concept; if low, content is being lost.">held-out judge</span><span class="v" id="fid-hold"> - </span></div>
         </div>
         <div style="margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--border);font-size:11px;color:var(--ink-muted);display:flex;justify-content:space-between;">
-          <span><span class="tip" data-tip="See the 'Compression footprint' section below.">compression footprint:</span> <b id="fid-footprint">— bpp · — ×</b></span>
-          <span class="tip" data-tip="Mean squared reconstruction error on z-normalized EEG.">MSE <b id="fid-mse-row">—</b></span>
+          <span><span class="tip" data-tip="See the 'Compression footprint' section below.">compression footprint:</span> <b id="fid-footprint"> - bpp · - ×</b></span>
+          <span class="tip" data-tip="Mean squared reconstruction error on z-normalized EEG.">MSE <b id="fid-mse-row"> - </b></span>
         </div>
       </div>
     </div>
@@ -348,18 +348,18 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
         <h2>Reconstruction viewer</h2>
         <div class="sub">Click any retrieved card above to inspect that epoch's waveform vs its decompressed reconstructions.</div>
       </div>
-      <div class="meta">epoch <b id="ep-num">—</b> &middot; <span id="ep-concept">—</span></div>
+      <div class="meta">epoch <b id="ep-num"> - </b> &middot; <span id="ep-concept"> - </span></div>
     </div>
 
     <div class="viewer-stats" id="viewer-stats">
       <div class="item"><span class="k tip" data-tip="Trial-averaged input EEG for this concept: averaging the 80 repetitions per concept denoises the signal substantially.">raw:</span><span class="v">63 ch × 250 ts (avg 80 reps)</span></div>
-      <div class="item"><span class="k tip" data-tip="Bits per sample and reconstruction MSE on this specific epoch's decompressed output. bpp = total compressed bits ÷ 15,750 samples. MSE is on z-normalized EEG (per-channel mean=0, std=1).">NeuroZip:</span><span class="v" id="vh-nzn">— bpp · MSE —</span></div>
-      <div class="item"><span class="k tip" data-tip="Same metrics for the fidelity baseline (MSE+rate only, no task loss).">fidelity:</span><span class="v" id="vh-fid">— bpp · MSE —</span></div>
+      <div class="item"><span class="k tip" data-tip="Bits per sample and reconstruction MSE on this specific epoch's decompressed output. bpp = total compressed bits ÷ 15,750 samples. MSE is on z-normalized EEG (per-channel mean=0, std=1).">NeuroZip:</span><span class="v" id="vh-nzn"> - bpp · MSE  - </span></div>
+      <div class="item"><span class="k tip" data-tip="Same metrics for the fidelity baseline (MSE+rate only, no task loss).">fidelity:</span><span class="v" id="vh-fid"> - bpp · MSE  - </span></div>
       <div class="item" id="vh-status"></div>
     </div>
 
     <div class="figs">
-      <div class="fig-cell wide"><h3 class="tip" data-tip="Each row is one EEG channel, columns are timesteps from -200ms to +996ms relative to stimulus onset. Color = normalized amplitude (σ units). All three panels share the same color scale so you can compare reconstructions visually.">Raw vs decompressed — channel × time heatmap</h3><img id="fig-heatmap" /></div>
+      <div class="fig-cell wide"><h3 class="tip" data-tip="Each row is one EEG channel, columns are timesteps from -200ms to +996ms relative to stimulus onset. Color = normalized amplitude (σ units). All three panels share the same color scale so you can compare reconstructions visually.">Raw vs decompressed - channel × time heatmap</h3><img id="fig-heatmap" /></div>
       <div class="fig-cell wide"><h3 class="tip" data-tip="6 representative scalp channels plotted as time-series. Black = raw EEG, red = NeuroZip reconstruction, gray dashed = fidelity reconstruction. Vertical line at 0ms = stimulus onset.">Per-channel waveforms</h3><img id="fig-waveforms" /></div>
       <div class="fig-cell"><h3 class="tip" data-tip="|raw − reconstruction| for each codec, shared color scale. Brighter = more error at that (channel, time) cell. MSE label is the mean of this map.">Reconstruction error</h3><img id="fig-diff" /></div>
       <div class="fig-cell"><h3 class="tip" data-tip="The 32×32 = 1024 integer symbols the codec ships over the wire (one heatmap per codec). Symbol values are color-coded. NeuroZip typically uses more dynamic range (more distinct integers) than fidelity at the same architecture.">Quantized latent (the shipped data)</h3><img id="fig-latent" /></div>
@@ -402,9 +402,9 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   <section class="section">
     <div class="section-head">
       <div class="title-block">
-        <h2>Compression footprint <span style="font-weight:400;color:var(--ink-muted);font-size:13px;">— the table of last resort</span></h2>
+        <h2>Compression footprint <span style="font-weight:400;color:var(--ink-muted);font-size:13px;"> - the table of last resort</span></h2>
         <div class="sub">bpp, compression ratio, and bytes-per-epoch for every codec. Buried on purpose, because reading these as
-        the headline number is misleading (NeuroZip's bpp is higher than fidelity's — see the explainer below it).</div>
+        the headline number is misleading (NeuroZip's bpp is higher than fidelity's - see the explainer below it).</div>
       </div>
     </div>
 
@@ -423,7 +423,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
 
     <div style="margin-top:var(--space-5); padding:var(--space-4) var(--space-5); background:var(--surface-2); border-radius:10px; font-size:13px; line-height:1.6; color:var(--ink-2);">
       <b style="color:var(--ink)">Why is NeuroZip's bpp higher than fidelity's at the same tier?</b>
-      Because NeuroZip's task loss forces the codec to preserve <i>more information per epoch</i> — specifically the
+      Because NeuroZip's task loss forces the codec to preserve <i>more information per epoch</i> - specifically the
       CLIP-decodable structure that fidelity throws away. More information has a real Shannon cost in bits;
       <i>you can't compress more information into the same number of bits</i>. The bpp gap is the price of carrying
       task-relevant content; <b style="color:var(--ink)">the retrieval lift up top is what you get for paying it.</b>
@@ -436,7 +436,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   </section>
 
   <section class="glossary">
-    <h2>Glossary — what every number on this page means</h2>
+    <h2>Glossary - what every number on this page means</h2>
     <dl>
       <dt>bpp</dt>
       <dd><b>bits per sample.</b> Average number of bits each raw EEG datapoint needs in the compressed representation.
@@ -455,12 +455,12 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
       <dt>top-1, top-5, top-10</dt>
       <dd><b>Image-prompt retrieval accuracy.</b> For each of the 200 test concepts, take the trial-averaged EEG, compress
         and decompress it, project to CLIP space, and rank all 200 CLIP image embeddings by cosine similarity. Top-k = fraction
-        of concepts where the gold image is in the top k retrievals. <b>Chance levels: 0.5% / 2.5% / 5.0%</b> — anything above those
+        of concepts where the gold image is in the top k retrievals. <b>Chance levels: 0.5% / 2.5% / 5.0%</b> - anything above those
         beats random. The projector P (frozen judge) hits 18.5 / 45.0 / 65.0% on raw uncompressed EEG; that's the ceiling.</dd>
 
       <dt>held-out</dt>
       <dd><b>Independent classifier top-1.</b> A separate EEG → concept classifier is trained on 60 of the 80 test reps per
-        concept (averaging blocks of 10 reps for SNR) — it never sees codec output during its own training. At evaluation we
+        concept (averaging blocks of 10 reps for SNR) - it never sees codec output during its own training. At evaluation we
         score its top-1 on each codec's decompressed test EEG. This is the <b>circularity defense</b>: a high number means
         an independent judge can still identify the concept after compression, so the win isn't gaming the projector.</dd>
 
@@ -496,10 +496,10 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
 
 <script>
 (async function() {
-  const fmt = (x, d=1) => (x==null ? "—" : (100*x).toFixed(d) + "%");
-  const fmtBpp = (x) => x==null ? "—" : x.toFixed(3) + " bpp";
-  const fmtR = (x) => x==null ? "—" : x.toFixed(0) + "×";
-  const fmtMse = (x) => x==null ? "—" : x.toFixed(4);
+  const fmt = (x, d=1) => (x==null ? " - " : (100*x).toFixed(d) + "%");
+  const fmtBpp = (x) => x==null ? " - " : x.toFixed(3) + " bpp";
+  const fmtR = (x) => x==null ? " - " : x.toFixed(0) + "×";
+  const fmtMse = (x) => x==null ? " - " : x.toFixed(4);
 
   // ---------- bootstrap ----------
   const [models, conceptsResp, baseline] = await Promise.all([
@@ -569,7 +569,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
     `<b>+${lift.toFixed(1)} pp</b> over iso-rate fidelity baseline (${heroNzn.ratio.toFixed(0)}× compression)` +
     (usRetainPct ? `<br><span style="font-weight:400;color:var(--ink-2);font-size:12px;">retains <b>${usRetainPct.toFixed(0)}%</b> of the raw-EEG ceiling (${fmt(RAW_TOP5)})</span>` : "");
   document.getElementById("hero-them-detail").innerHTML =
-    `at the same <span class="tip" data-tip="The fidelity baseline at this exact bpp doesn't exist as a trained checkpoint; we interpolate linearly between the two nearest fidelity tiers. See the rate-retrieval plot for the underlying curve.">${heroNzn.bpp.toFixed(3)} bpp</span> as NeuroZip — interpolated from the fidelity rate-retrieval curve` +
+    `at the same <span class="tip" data-tip="The fidelity baseline at this exact bpp doesn't exist as a trained checkpoint; we interpolate linearly between the two nearest fidelity tiers. See the rate-retrieval plot for the underlying curve.">${heroNzn.bpp.toFixed(3)} bpp</span> as NeuroZip - interpolated from the fidelity rate-retrieval curve` +
     (themRetainPct ? `<br><span style="font-weight:400;color:var(--ink-muted);font-size:12px;">retains <b>${themRetainPct.toFixed(0)}%</b> of the ceiling</span>` : "");
 
   // Context bar: chance | iso-rate fidelity | NeuroZip best | raw ceiling | SOTA
@@ -608,7 +608,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
     tbody.appendChild(tr);
   });
 
-  // Footprint table (bottom) — pure compression stats, no retrieval columns.
+  // Footprint table (bottom) - pure compression stats, no retrieval columns.
   const footprintBody = document.querySelector("#footprint-table tbody");
   allRows.forEach(([n,m]) => {
     const isUs = n.startsWith("neurozip");
@@ -646,7 +646,7 @@ footer a { color: var(--ink-2); text-decoration: underline; text-decoration-colo
   function tierLabel(i) {
     const labels = (tiers===4) ? ["highest compression","high","medium","lowest compression"]
                 : ["high compression","medium","low compression"];
-    return `${labels[i]||`tier ${i+1}`} — slide for less/more`;
+    return `${labels[i]||`tier ${i+1}`} - slide for less/more`;
   }
 
   let lastQuery = null, lastResult = null, lastSelected = null;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>NeuroZip — type what someone looked at, find the brain recording</title>
+<title>NeuroZip - type what someone looked at, find the brain recording</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,7 +105,7 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #ddd;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Hero EEG band — visible brain-data evidence above the fold */
+/* Hero EEG band - visible brain-data evidence above the fold */
 .hero-eeg{margin:24px 0 14px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
 .hero-eeg-head{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
 .hero-eeg-head .left{color:var(--ink-2);}
@@ -128,13 +128,13 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <h1>Type a word.<br>Find a <span>thought</span>.</h1>
     <div class="lede">
       A neural EEG codec that compresses 144×, stays text-searchable, and
-      re-discovers — unsupervised — where in the brain object identity
+      re-discovers - unsupervised - where in the brain object identity
       lives. Read this page top-to-bottom and you're reading the 3-minute
       pitch (slide-by-slide companion: <a href="https://github.com/anthropics/claude-code">pitch.md</a>).
     </div>
   </header>
 
-  <!-- ============ HERO EEG BAND — visible brain data above the fold ============ -->
+  <!-- ============ HERO EEG BAND - visible brain data above the fold ============ -->
   <div class="hero-eeg" id="hero-eeg" aria-label="Live EEG epoch from the THINGS-EEG test set">
     <div class="hero-eeg-head">
       <div class="left">
@@ -148,12 +148,12 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <img id="hero-eeg-img" alt="EEG channel × time visualization" />
   </div>
 
-  <!-- ============ SLIDE 01 + 02 — the live demo ============ -->
+  <!-- ============ SLIDE 01 + 02 - the live demo ============ -->
   <section class="bio" style="margin-bottom:24px;">
     <div class="header">
       <h2><span class="num">01 · 02</span>Type a word → find a thought · same EEG, two compressions</h2>
       <div class="sub">
-        One second of human EEG — 63 electrodes, someone looking at a photo.
+        One second of human EEG - 63 electrodes, someone looking at a photo.
         You can't read it. The model learned to align brain recordings with
         the images people saw; the language model brings the words for free.
         Type a concept and search both codecs side-by-side.
@@ -178,27 +178,27 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="pane us">
       <div class="pane-head">
         <div class="name">NeuroZip · task-aware</div>
-        <div class="badge" id="us-badge">— bpp · —×</div>
+        <div class="badge" id="us-badge"> - bpp ·  - ×</div>
       </div>
       <div class="gt-strip" id="gt-us">
         <div style="width:54px;height:54px;background:#f1f1f4;border:2px solid var(--border);"></div>
-        <div class="gt-text"><strong>—</strong><span>ground-truth stimulus (what the subject saw)</span></div>
+        <div class="gt-text"><strong> - </strong><span>ground-truth stimulus (what the subject saw)</span></div>
       </div>
       <div class="cards" id="cards-us"></div>
-      <div class="verdict" id="verdict-us">—</div>
+      <div class="verdict" id="verdict-us"> - </div>
     </div>
 
     <div class="pane them">
       <div class="pane-head">
         <div class="name">Fidelity baseline · MSE-only (same architecture, no task loss)</div>
-        <div class="badge" id="them-badge">— bpp · —×</div>
+        <div class="badge" id="them-badge"> - bpp ·  - ×</div>
       </div>
       <div class="gt-strip" id="gt-them">
         <div style="width:54px;height:54px;background:#f1f1f4;border:2px solid var(--border);"></div>
-        <div class="gt-text"><strong>—</strong><span>ground-truth stimulus (what the subject saw)</span></div>
+        <div class="gt-text"><strong> - </strong><span>ground-truth stimulus (what the subject saw)</span></div>
       </div>
       <div class="cards" id="cards-them"></div>
-      <div class="verdict" id="verdict-them">—</div>
+      <div class="verdict" id="verdict-them"> - </div>
     </div>
   </div>
 
@@ -208,22 +208,22 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="body">
       Same brain recording, same architecture, two losses. Fidelity minimizes
       waveform error. NeuroZip adds a term: "preserve whatever lets us figure
-      out what the person saw." At aggressive compression they diverge —
+      out what the person saw." At aggressive compression they diverge  - 
       fidelity reconstructs noise that happens to be low-MSE; NeuroZip
       reconstructs the meaning.
-      <span style="color:var(--muted);font-size:14px">(At this tier NeuroZip uses 46% more bits; bits match within 5% at higher tiers — full iso-rate table in <a href="https://github.com/anthropics/claude-code">results.md</a>.)</span>
+      <span style="color:var(--muted);font-size:14px">(At this tier NeuroZip uses 46% more bits; bits match within 5% at higher tiers - full iso-rate table in <a href="https://github.com/anthropics/claude-code">results.md</a>.)</span>
     </div>
   </div>
 
-  <!-- ============ SLIDE 03 — where AND when the meaning lives ============ -->
+  <!-- ============ SLIDE 03 - where AND when the meaning lives ============ -->
   <section class="bio">
     <div class="header">
       <h2><span class="num">03</span>Where + when the meaning lives</h2>
       <div class="sub">
-        We compressed 144-fold — throwing away everything but meaning — and
+        We compressed 144-fold - throwing away everything but meaning - and
         looked at what survived. It's not smeared across the brain. It
         concentrates at occipitotemporal electrodes, biggest right at the
-        N170, 150–200 ms after stimulus — the window the brain identifies
+        N170, 150–200 ms after stimulus - the window the brain identifies
         objects. We used compression as a microscope.
       </div>
     </div>
@@ -249,7 +249,7 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
       <div class="cap">
         <b>When.</b> Red (NeuroZip) below gray (fidelity) at every post-stimulus
         timepoint; biggest gap inside the N170 window. Pre-stimulus (−200 to 0 ms)
-        is at parity — no task signal there to preserve.
+        is at parity - no task signal there to preserve.
       </div>
     </div>
     <div class="bio-stats" style="margin-top:14px">
@@ -274,21 +274,21 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
       <div class="cap">
         <b>Where.</b> Three head maps, viewed from above. <b>Left:</b> fidelity's
         per-channel error (big back-of-head blob = strong visual signal it fails to
-        preserve). <b>Center:</b> NeuroZip's error — same place, much smaller blob.
-        <b>Right:</b> the difference, red where NeuroZip wins — concentrated
+        preserve). <b>Center:</b> NeuroZip's error - same place, much smaller blob.
+        <b>Right:</b> the difference, red where NeuroZip wins - concentrated
         occipitally, as visual neuroscience would predict.
       </div>
     </div>
   </section>
 
-  <!-- ============ SLIDE 04 — 144× / 100% ============ -->
+  <!-- ============ SLIDE 04 - 144× / 100% ============ -->
   <section class="bio">
     <div class="header">
       <h2><span class="num">04</span>144× compression. 100% accuracy on an independent classifier.</h2>
       <div class="sub">
-        And that meaning is tiny. At 144× compression, a separate classifier —
+        And that meaning is tiny. At 144× compression, a separate classifier  - 
         different EEG split, different loss, different output head, never
-        optimized against — still reads the object the subject saw with
+        optimized against - still reads the object the subject saw with
         <b>100%</b> accuracy from our reconstruction. The fidelity baseline
         drops to 88. The "what you saw" signal is low-dimensional and robust.
       </div>
@@ -312,35 +312,38 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     </div>
   </section>
 
-  <!-- ============ SLIDE 05 — the one-sentence "how" ============ -->
+  <!-- ============ SLIDE 05 - the one-sentence "how" ============ -->
   <section class="bio">
     <div class="header">
       <h2><span class="num">05</span>How it works · one sentence</h2>
       <div class="sub">
         We put a <b>frozen judge</b> in the loop that scores whether the
-        meaning survived, and train the compressor against it — so the model
+        meaning survived, and train the compressor against it - so the model
         that decides what to keep is what lets you search by typing.
       </div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);padding:24px 28px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;color:var(--ink);">
-EEG epoch ──► encoder ──► quantize ──► decoder ──► EEĜ ──► <span style="color:var(--accent)">P (frozen judge)</span> ──► ε̂<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">↑ gradient flows back</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">1 − cos(ε̂, CLIP_image(seen_image))</span><br><br>
-L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  +  λ<sub>task</sub> · (1 − cos(ε̂, ε*))
+    <div class="bio-fig">
+      <img src="/plots/architecture.png" alt="A frozen judge in the training loop - full architecture diagram of NeuroZip's task-aware codec." />
+      <div class="cap">
+        Trained modules in navy, frozen in hatched gray. The task gradient
+        (red dashed) propagates from the cosine loss back through the
+        frozen projector P into the decoder; the projector's own weights
+        receive no update. The same P that scores "did the meaning
+        survive" at training is what reads your free-text query at
+        inference. Full derivation, the three correctness conditions, and
+        the v1 to v4 evolution in
+        <a href="https://github.com/anthropics/claude-code">ARCHITECTURE.md</a>.
+      </div>
     </div>
-    <div style="margin-top:10px;font-size:13px;color:var(--muted);">
-      P's weights stay frozen; the gradient does not. That's the only trick.
-      The same model that scores "did the meaning survive" at training is the
-      model that takes your free-text query at inference. See
-      <a href="https://github.com/anthropics/claude-code">ARCHITECTURE.md</a> for the full derivation,
-      the three correctness conditions, and the v1 → v4 evolution.
+    <div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);padding:18px 22px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);text-align:center;">
+      L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG - EEĜ‖²  +  λ<sub>task</sub> · (1 - cos(ε̂, ε*))
     </div>
   </section>
 
-  <!-- ============ SLIDE 06 — the honest slide ============ -->
+  <!-- ============ SLIDE 06 - the honest slide ============ -->
   <section class="bio" style="border-left:3px solid var(--accent);padding-left:20px;">
     <div class="header">
-      <h2><span class="num">06</span>Where we're weak — and why we trust it anyway</h2>
+      <h2><span class="num">06</span>Where we're weak - and why we trust it anyway</h2>
       <div class="sub">
         We'd rather you trust these numbers than be dazzled by them, so here's
         the honest read.
@@ -365,7 +368,7 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);padding:18px 22px;margin-top:14px;font-size:14px;line-height:1.6;color:var(--ink-2);">
       <b style="color:var(--ink)">And we tried to catch ourselves cheating.</b> The retrieval metric runs
-      through the same projector we trained the codec against — that's the
+      through the same projector we trained the codec against - that's the
       circularity objection a sharp judge will raise. So we trained a
       <b>separate classifier</b> on a different EEG split with a different loss
       and a different output head, and never optimized the codec against it. At
@@ -376,14 +379,14 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
     </div>
   </section>
 
-  <!-- ============ SLIDE 07 — close ============ -->
+  <!-- ============ SLIDE 07 - close ============ -->
   <section class="bio">
     <div class="header">
       <h2><span class="num">07</span>Close</h2>
       <div class="sub">
         NeuroZip: brain datasets two orders of magnitude smaller, searchable by
-        language — and a finding that object identity in the brain is
-        low-dimensional, localized, and robust. Type a word — find a thought.
+        language - and a finding that object identity in the brain is
+        low-dimensional, localized, and robust. Type a word - find a thought.
       </div>
     </div>
     <div class="bio-fig">
@@ -420,7 +423,7 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
 
 <script>
 (async function() {
-  const fmt = (x, d=1) => (x == null ? "—" : (100*x).toFixed(d) + "%");
+  const fmt = (x, d=1) => (x == null ? " - " : (100*x).toFixed(d) + "%");
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
   // ---- bootstrap ----
@@ -430,7 +433,7 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
   ]);
   const concepts = conceptsResp.concepts;
 
-  // Use the v4 checkpoints at the headline tier (low — biggest NeuroZip advantage).
+  // Use the v4 checkpoints at the headline tier (low - biggest NeuroZip advantage).
   function pickHeadlineModels() {
     // Prefer v4 if available, else v3, etc.
     for (const g of ["v4", "v3", "v2"]) {
@@ -498,7 +501,7 @@ L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  
     document.getElementById("verdict-them").className = "verdict " + (them_hit ? "win" : "miss");
     document.getElementById("verdict-us").innerHTML = us_hit
       ? `✓ NeuroZip retrieved the right concept at <b>rank ${us.gold_rank+1}</b> from compressed brain data.`
-      : `✗ NeuroZip's top-5 didn't include the right concept (gold rank ${us.gold_rank+1} of 200). This happens — retrieval averages 29% top-5; not every query lands.`;
+      : `✗ NeuroZip's top-5 didn't include the right concept (gold rank ${us.gold_rank+1} of 200). This happens - retrieval averages 29% top-5; not every query lands.`;
     document.getElementById("verdict-them").innerHTML = them_hit
       ? `✓ Fidelity also retrieved the right concept at <b>rank ${them.gold_rank+1}</b>.`
       : `✗ Fidelity's top-5 didn't include the right concept (gold rank ${them.gold_rank+1} of 200). It spent its bits on raw waveform instead of meaning.`;

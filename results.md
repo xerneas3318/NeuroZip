@@ -1,4 +1,4 @@
-# NeuroZip — results
+# NeuroZip - results
 
 Full retrieval / fidelity / circularity numbers for the recommended **v4**
 generation. Trained and evaluated on `Haitao999/things-eeg`, subject `sub-01`,
@@ -16,20 +16,20 @@ design rationale and the v1 → v4 evolution story.
 ## TL;DR
 
 > **Object identity in single-subject EEG is spatially + temporally
-> localized — and survives 144× compression with 100% concept-
+> localized - and survives 144× compression with 100% concept-
 > identification accuracy on an independent judge.**
 >
 > NeuroZip's task loss concentrates preservation exactly where the
 > visual system encodes object information:
 > - **WHERE**: visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
 >   **32% tighter** under NeuroZip than under a fidelity-only codec at
->   matched compression, vs only **7%** tighter on non-visual channels —
+>   matched compression, vs only **7%** tighter on non-visual channels  - 
 >   a **4.7× spatial preference**.
 > - **WHEN**: visual-evoked ERP windows reconstruct **12–25% tighter**.
 >   N170 (face/object component, 150–200 ms): NeuroZip MSE is **25.4%
 >   below** fidelity. P200, P100, P300 all also favored.
-> - **HOW MUCH SURVIVES**: a separate concept classifier — trained on a
->   different data split and a different loss — hits **100% top-1** on
+> - **HOW MUCH SURVIVES**: a separate concept classifier - trained on a
+>   different data split and a different loss - hits **100% top-1** on
 >   NeuroZip-decompressed EEG at 144× compression. The information
 >   needed to identify what someone looked at is *low-dimensional* and
 >   *retrievable from a tiny fraction of the original signal*.
@@ -55,7 +55,7 @@ Original framing (storage-pressure / compression contribution):
 | Test concepts | 200 (disjoint from train) |
 | Test repetitions | 80 per concept (16,000 epochs total) |
 | Eval input | trial-averaged across all 80 reps per concept |
-| CLIP variant | ViT-B/32 / LAION-2B (matches the dataset's precomputed features — *not* OpenAI; see ARCHITECTURE.md) |
+| CLIP variant | ViT-B/32 / LAION-2B (matches the dataset's precomputed features - *not* OpenAI; see ARCHITECTURE.md) |
 
 ## Projector (the frozen judge)
 
@@ -69,15 +69,15 @@ trial-averaged test set:
 | conv-only (AvgPool + MLP head) | 2.5 M | 13.5% | 37.5% | 50.5% |
 | **conv tower + [CLS] + 2 attn blocks** | **6.0 M** | **18.5%** | **45.0%** | **65.0%** |
 
-Chance on 200-way retrieval: 0.5% / 2.5% / 5.0% — judge clears it by 27× /
+Chance on 200-way retrieval: 0.5% / 2.5% / 5.0% - judge clears it by 27× /
 18× / 13× respectively.
 
-## Codecs (v4 — recommended)
+## Codecs (v4 - recommended)
 
 Architecture: conv-only encoder–quantizer–decoder, ~0.75 M params. Latent
 shape `(32 channels × 32 timesteps) = 1024 integer symbols per epoch`.
 Factorized Laplace prior for rate estimation. Same architecture for
-fidelity and NeuroZip — only `lambda_task` differs (0 vs 3.0).
+fidelity and NeuroZip - only `lambda_task` differs (0 vs 3.0).
 
 ### Fidelity baseline (MSE + rate only)
 
@@ -117,17 +117,17 @@ more bits but recovers more than that in retrievability.
 
 ## The money plot
 
-`demo/assets/rate_retrieval.png` — top-5 retrieval (y) vs bpp (x), both
+`demo/assets/rate_retrieval.png` - top-5 retrieval (y) vs bpp (x), both
 families. NeuroZip's curve sits cleanly above fidelity at every tier.
 
 ## MSE: the asymmetric trade
 
 Compared to the v2 (ViT-bottleneck codec) generation, v4 fidelity's MSE is
-**2.6× lower** at the medium tier (0.030 vs 0.065) — the conv-only codec
+**2.6× lower** at the medium tier (0.030 vs 0.065) - the conv-only codec
 just converges faster than the 4.3 M-param ViT codec within the same epoch
 budget. NeuroZip inherits this; v4 NeuroZip MSE is 2.8× lower than v2's.
 
-The intra-v4 fidelity-vs-NeuroZip MSE gap is small (typically ±5%) — see
+The intra-v4 fidelity-vs-NeuroZip MSE gap is small (typically ±5%) - see
 the table above. **NeuroZip's worst MSE deficit is ~5%; its best top-5
 advantage is +11 pp (~+42% relative).** The trade is heavily asymmetric in
 NeuroZip's favor, which is the entire point.
@@ -137,7 +137,7 @@ NeuroZip's favor, which is the entire point.
 A **separate** EEG → concept classifier is trained on 60 of the 80 test
 reps per concept (averaging blocks of 10 reps as inputs for SNR), then
 scored on each codec's decompressed test EEG. The classifier never sees
-codec output during its own training — it's a different judge with a
+codec output during its own training - it's a different judge with a
 different loss (softmax vs contrastive) and a different objective
 (classification vs CLIP-space alignment).
 
@@ -153,7 +153,7 @@ With the v4 attention judge, the held-out classifier saturates near
 
 If you want a more discriminating circularity check, the v1 (conv-only)
 classifier saved at `clip_proj_legacy.pt` is weaker and shows clearer
-gaps — useful as a sanity check that v4 isn't co-adapting against an
+gaps - useful as a sanity check that v4 isn't co-adapting against an
 unrealistically strong judge.
 
 ## Per-codec storage in human terms
@@ -188,7 +188,7 @@ image-prompt retrieval; gold = concept the subject saw):
 | suit | 3 of 4 tiers ✓ | 1 of 4 tiers |
 | submarine | 3 of 4 tiers ✓ | 1 of 4 tiers |
 
-These appear in the demo's "featured" dropdown by default — re-run the
+These appear in the demo's "featured" dropdown by default - re-run the
 sweep + `evaluate.py` to regenerate the list (`demo/assets/summary.json`).
 
 ## How to reproduce
@@ -237,7 +237,7 @@ Hyperparameters per stage are in `scripts/train_sweep_v4.sh`. The
 
 Definitions for every metric that appears above or in the demo UI.
 
-### `bpp` — bits per sample
+### `bpp` - bits per sample
 
 Average number of bits each EEG datapoint requires in the compressed
 representation. One epoch has 63 channels × 250 timesteps = **15,750
@@ -253,7 +253,7 @@ Where it comes from: the codec encoder outputs a latent of shape
 factorized Laplace prior estimates `bits per symbol = -log2 p(symbol)`.
 Then `bpp = (bits per symbol × 1024) ÷ 15,750`.
 
-### `ratio` — compression ratio vs fp16
+### `ratio` - compression ratio vs fp16
 
 `16 ÷ bpp`. A ratio of `144×` means the compressed epoch is `1/144` the
 size of the raw fp16 epoch.
@@ -261,7 +261,7 @@ size of the raw fp16 epoch.
 - `144×` means a 31,500 B raw epoch becomes ~219 B compressed.
 - **Higher is better.**
 
-### `MSE` — reconstruction mean squared error
+### `MSE` - reconstruction mean squared error
 
 Mean squared error between the raw and decompressed EEG, on **per-channel
 z-normalized signals** (each channel has mean 0, std 1 after normalization
@@ -270,11 +270,11 @@ in `data.py`).
 - Units: squared fraction of one channel's standard deviation.
 - To convert to squared microvolts, multiply by the per-channel std² stored
   in `data/norm_stats.pt`.
-- This is **waveform fidelity only** — a low-MSE codec can still throw
+- This is **waveform fidelity only** - a low-MSE codec can still throw
   away semantic content, which is the whole reason NeuroZip uses an
   additional task loss.
 
-### `top-1`, `top-5`, `top-10` — image-prompt retrieval
+### `top-1`, `top-5`, `top-10` - image-prompt retrieval
 
 For each of the 200 test concepts:
 1. Average that concept's 80 EEG repetitions (trial-averaging denoises).
@@ -289,10 +289,10 @@ retrievals`, averaged over all 200 concepts.
 
 - **Chance levels:** top-1 = 0.5%, top-5 = 2.5%, top-10 = 5.0%.
 - **Ceiling (raw uncompressed EEG via the same projector):**
-  18.5% / 45.0% / 65.0%. That's the "no compression" reference — every
+  18.5% / 45.0% / 65.0%. That's the "no compression" reference - every
   codec's score should be read as a *fraction of that*.
 
-### `held-out top-1` — circularity defense
+### `held-out top-1` - circularity defense
 
 A **separate** EEG→concept classifier (`train.py classifier`) is trained
 on 60 of the 80 test reps per concept (averaging blocks of 10 reps for
@@ -304,7 +304,7 @@ At evaluation we score this independent classifier's top-1 accuracy on
 each codec's decompressed test EEG.
 
 - This is the **circularity defense**: a high number means an independent
-  judge — which the codec's loss never optimized against — can still
+  judge - which the codec's loss never optimized against - can still
   identify the concept from the compressed signal. NeuroZip's win
   generalizes beyond the projector it was trained with.
 - With the v4 attention judge, this classifier is so strong it saturates

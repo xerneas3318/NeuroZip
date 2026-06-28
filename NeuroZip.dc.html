@@ -227,10 +227,11 @@
           <input type="file" id="comp-file-input" accept=".npy,.pkl,.bin" class="file-input" />
         </label>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:11px;">
-          <select id="comp-demo" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#4b5263;">
-            <option value="">demo epoch…</option>
+        <div style="display:grid;grid-template-columns:1.4fr auto 1fr 1fr;gap:8px;margin-top:11px;">
+          <select id="comp-demo" title="load a real EEG epoch from THINGS-EEG as if you'd uploaded its .npy" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#4b5263;">
+            <option value="">Load example .npy…</option>
           </select>
+          <a id="comp-dl-example" href="#" title="download the selected example .npy to your disk" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:11.5px;color:#8b92a4;text-decoration:none;font-family:'IBM Plex Mono',monospace;pointer-events:none;opacity:.5;" target="_blank">↓ .npy</a>
           <select id="comp-variant" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#161a22;">
             <option value="neurozip">neurozip</option>
             <option value="fidelity">fidelity</option>
@@ -270,6 +271,13 @@
           <div id="dec-file-meta" style="font-size:11px;color:#9aa1b2;font-family:'IBM Plex Mono',monospace;">compressed bitstream from the codec</div>
           <input type="file" id="dec-file-input" accept=".nz,.pkl,.bin,.npz" class="file-input" />
         </label>
+
+        <div style="display:grid;grid-template-columns:1.4fr auto;gap:8px;margin-top:11px;">
+          <select id="dec-demo" title="load a pre-compressed example .nz from the test set" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#4b5263;">
+            <option value="">Load example .nz…</option>
+          </select>
+          <a id="dec-dl-example" href="#" title="download the selected example .nz to your disk" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:11.5px;color:#8b92a4;text-decoration:none;font-family:'IBM Plex Mono',monospace;pointer-events:none;opacity:.5;" target="_blank">↓ .nz</a>
+        </div>
 
         <div style="display:flex;align-items:center;gap:11px;margin-top:11px;">
           <button id="dec-btn" style="padding:9px 20px;border-radius:8px;border:none;background:#3b4252;color:#fff;font:inherit;font-weight:600;font-size:13px;cursor:pointer;opacity:.5;" disabled>Decompress</button>
@@ -582,12 +590,18 @@
     if (i === tier) o.selected = true;
     compTierSel.appendChild(o);
   }
+  // ---------- example files: populate both compress + decompress dropdowns ----------
+  let examplesData = { examples: [], default_model: "neurozip_v4_high" };
+  try { examplesData = await fetch("/api/examples").then(r => r.json()); } catch {}
   const compDemoSel = document.getElementById("comp-demo");
-  // Use the featured concepts as demo epoch options
-  for (const i of (featured.length ? featured : [0, 50, 100, 150])) {
+  const decDemoSel  = document.getElementById("dec-demo");
+  for (const e of examplesData.examples) {
     const o = document.createElement("option");
-    o.value = i; o.textContent = `${cap(concepts[i].replace(/_/g," "))} (epoch #${i})`;
+    o.value = e.idx;
+    o.textContent = `${cap(e.concept.replace(/_/g," "))} (epoch #${e.idx})`;
     compDemoSel.appendChild(o);
+    const o2 = o.cloneNode(true);
+    decDemoSel.appendChild(o2);
   }
 
   // ---------- retrieval ----------
@@ -680,11 +694,31 @@
     document.getElementById("comp-status").textContent = (compEpochIdx != null || compUploadedB64) ? "ready" : "awaiting file";
   }
 
-  document.getElementById("comp-demo").addEventListener("change", (e) => {
-    if (!e.target.value) return;
-    compEpochIdx = +e.target.value; compUploadedB64 = null;
-    setCompFileLabel(`${cap(concepts[compEpochIdx].replace(/_/g," "))} (test epoch #${compEpochIdx})`, "test set · 63 × 250 float16 · 31,500 B");
-    document.getElementById("comp-file-input").value = "";
+  // Selecting a demo example fetches the real .npy from the server and loads
+  // it as if the user had uploaded it. That way the workspace is genuinely
+  // exercising the file-upload + compress path, not a server-side shortcut.
+  document.getElementById("comp-demo").addEventListener("change", async (e) => {
+    const v = e.target.value;
+    const dl = document.getElementById("comp-dl-example");
+    if (!v) {
+      dl.href = "#"; dl.style.pointerEvents = "none"; dl.style.opacity = ".5";
+      return;
+    }
+    const idx = +v;
+    const concept = cap(concepts[idx].replace(/_/g," "));
+    dl.href = `/api/demo_epoch/${idx}`;
+    dl.style.pointerEvents = "auto"; dl.style.opacity = "1"; dl.style.color = "#3b4252";
+    // Fetch the .npy through the upload path so users see the real round-trip.
+    setCompFileLabel(`fetching ${concept} (epoch #${idx})…`, "loading from server");
+    try {
+      const blob = await fetch(`/api/demo_epoch/${idx}`).then(r => r.blob());
+      compEpochIdx = null;
+      compUploadedB64 = await blobToB64(blob);
+      setCompFileLabel(`${concept}_idx${idx}.npy`, fmtBytes(blob.size) + " · loaded from /api/demo_epoch");
+      document.getElementById("comp-file-input").value = "";
+    } catch (err) {
+      setCompFileLabel("load failed", err.message || String(err));
+    }
   });
   function blobToB64(blob) {
     return new Promise((res, rej) => {
@@ -777,6 +811,31 @@
     const f = e.target.files && e.target.files[0]; if (!f) return;
     decUploadedB64 = await blobToB64(f);
     setDecFileLabel(f.name, fmtBytes(f.size) + " · uploaded");
+  });
+  // Pre-compressed example .nz from the server (already passed through
+  // the default codec). Loads exactly like an uploaded .nz so decompress
+  // works without first running compress.
+  document.getElementById("dec-demo").addEventListener("change", async (e) => {
+    const v = e.target.value;
+    const dl = document.getElementById("dec-dl-example");
+    const model = examplesData.default_model || "neurozip_v4_high";
+    if (!v) {
+      dl.href = "#"; dl.style.pointerEvents = "none"; dl.style.opacity = ".5";
+      return;
+    }
+    const idx = +v;
+    const concept = cap(concepts[idx].replace(/_/g," "));
+    dl.href = `/api/demo_compressed/${idx}?model=${encodeURIComponent(model)}`;
+    dl.style.pointerEvents = "auto"; dl.style.opacity = "1"; dl.style.color = "#3b4252";
+    setDecFileLabel(`fetching ${concept} (epoch #${idx})…`, "loading compressed bytes from server");
+    try {
+      const blob = await fetch(`/api/demo_compressed/${idx}?model=${encodeURIComponent(model)}`).then(r => r.blob());
+      decUploadedB64 = await blobToB64(blob);
+      setDecFileLabel(`${concept}_idx${idx}.${model}.nz`, fmtBytes(blob.size) + " · loaded from /api/demo_compressed");
+      document.getElementById("dec-file-input").value = "";
+    } catch (err) {
+      setDecFileLabel("load failed", err.message || String(err));
+    }
   });
   const dd = document.getElementById("dec-drop");
   dd.addEventListener("dragover", e => e.preventDefault());

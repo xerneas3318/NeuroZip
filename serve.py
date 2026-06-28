@@ -692,6 +692,57 @@ def api_demo_epoch(idx):
                      as_attachment=True, download_name=f"{concept}_idx{idx}.npy")
 
 
+@app.get("/api/demo_compressed/<int:idx>")
+def api_demo_compressed(idx):
+    """Stream a real EEG epoch already compressed through the requested codec
+    as a .nz file. The decompress pane's example-file dropdown uses this so
+    users can roundtrip without first running compress."""
+    if not (0 <= idx < State.eeg_avg.size(0)):
+        return abort(404)
+    model_name = request.args.get("model", "neurozip_v4_high")
+    if model_name not in State.codecs:
+        return abort(404)
+    x = State.eeg_avg[idx:idx+1].to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        y = codec.encoder(x)
+        y_int = torch.round(y).cpu().squeeze(0).int().numpy()
+    blob = _serialize_compressed(model_name, y_int)
+    concept = State.concept_list[idx]
+    return send_file(io.BytesIO(blob), mimetype="application/octet-stream",
+                     as_attachment=True, download_name=f"{concept}_idx{idx}.{model_name}.nz")
+
+
+# Curated set of example test-set concepts: visually distinct, well-known names
+# that actually appear in THINGS-EEG's 200-concept test split. Shown as
+# "Load example..." options in the workspace, also downloadable as .npy / .nz
+# so people can save and re-upload them through the workspace.
+EXAMPLE_CONCEPTS = [
+    # animals
+    "cat", "dalmatian", "flamingo", "ostrich", "cheetah", "manatee",
+    # objects
+    "robot", "unicycle", "submarine", "drum", "basketball", "ferry",
+    "bench", "wheelchair",
+    # food
+    "banana", "bread", "egg",
+]
+
+
+@app.get("/api/examples")
+def api_examples():
+    """Return the curated set of demo concepts that DO exist in the test split,
+    with their epoch indices so the frontend can fetch the right .npy / .nz."""
+    out = []
+    for c in EXAMPLE_CONCEPTS:
+        try:
+            idx = State.concept_list.index(c)
+        except ValueError:
+            continue
+        out.append({"concept": c, "idx": idx})
+    return jsonify({"examples": out,
+                    "default_model": "neurozip_v4_high" if "neurozip_v4_high" in State.codecs else next(iter(State.codecs))})
+
+
 @app.post("/api/aggregate_figs")
 def aggregate_figs():
     """Test-set aggregates (per-channel MSE, entropy hist). Cache for a tier."""

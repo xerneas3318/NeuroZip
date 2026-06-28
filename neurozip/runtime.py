@@ -146,6 +146,34 @@ def load_projector(ckpt: Path | None = None):
     return load_frozen_projector(ckpt / "clip_proj.pt", device="cpu")
 
 
+def load_rqvae(name: str = "rqvae_high", ckpt: Path | None = None):
+    """Load an RQ-VAE codec checkpoint (the residual vector-quantized variant)."""
+    torch = _torch()
+    from .models.rqvae import EEGRQVAE
+    ckpt = ckpt or checkpoints_dir()
+    path = ckpt / f"{name}.pt"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Missing RQ-VAE checkpoint {path.name} in {ckpt}. Train it with "
+            "training/train_rqvae.py on a machine with the dataset, then place it here.")
+    state = torch.load(path, weights_only=False, map_location="cpu")
+    cfg = state.get("config", {})
+    m = EEGRQVAE(c_lat=cfg.get("c_lat", 32), hidden=cfg.get("hidden", 128),
+                 n_attn=cfg.get("n_attn", 0), n_q=cfg.get("n_q", 8),
+                 codebook_size=cfg.get("codebook_size", 512), beta=cfg.get("beta", 0.25))
+    m.load_state_dict(state["model"])
+    m.eval()
+    return m
+
+
+def available_rqvae(ckpt: Path | None = None) -> list[str]:
+    """Names of RQ-VAE checkpoints present (so the UI/CLI can list both model families)."""
+    ckpt = ckpt or checkpoints_dir()
+    if not ckpt.exists():
+        return []
+    return sorted(p.stem for p in ckpt.glob("rqvae_*.pt"))
+
+
 def scores(ckpt: Path | None = None) -> dict:
     ckpt = ckpt or checkpoints_dir()
     p = ckpt / "scores.json"

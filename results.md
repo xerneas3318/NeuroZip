@@ -15,6 +15,31 @@ design rationale and the v1 → v4 evolution story.
 
 ## TL;DR
 
+> **Object identity in single-subject EEG is spatially + temporally
+> localized — and survives 144× compression with 100% concept-
+> identification accuracy on an independent judge.**
+>
+> NeuroZip's task loss concentrates preservation exactly where the
+> visual system encodes object information:
+> - **WHERE**: visual-cortex channels (O1 O2 Oz Iz PO7 PO8 …) reconstruct
+>   **32% tighter** under NeuroZip than under a fidelity-only codec at
+>   matched compression, vs only **7%** tighter on non-visual channels —
+>   a **4.7× spatial preference**.
+> - **WHEN**: visual-evoked ERP windows reconstruct **12–25% tighter**.
+>   N170 (face/object component, 150–200 ms): NeuroZip MSE is **25.4%
+>   below** fidelity. P200, P100, P300 all also favored.
+> - **HOW MUCH SURVIVES**: a separate concept classifier — trained on a
+>   different data split and a different loss — hits **100% top-1** on
+>   NeuroZip-decompressed EEG at 144× compression. The information
+>   needed to identify what someone looked at is *low-dimensional* and
+>   *retrievable from a tiny fraction of the original signal*.
+>
+> Mechanism: see [`ARCHITECTURE.md`](ARCHITECTURE.md). Numerical
+> evidence: [`plots/phase0_summary.json`](plots/phase0_summary.json),
+> [`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json).
+
+Original framing (storage-pressure / compression contribution):
+
 > **NeuroZip preserves more retrievability per bit at every compression tier.**
 > +4 to +11 percentage points on top-5 image-prompt retrieval vs the
 > fidelity baseline, while MSE is within ±5%. The held-out concept

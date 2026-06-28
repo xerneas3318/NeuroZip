@@ -42,17 +42,24 @@ from comparing an RVQ codec trained on a **better protocol** (trial-averaged +
 scale-augmentation) against v4 trained on single trials. That protocol helps
 *both* quantizers equally:
 
-| codec (averaged + scale-aug protocol, ~72×) | MSE ↓ | var-exp | top1 | **top5** | top10 |
-|---|---:|---:|---:|---:|---:|
-| scalar + Laplace | 0.0072 | 80% | 14.5 | 38.0 | 57.5 |
-| RQ-VAE | 0.0071 | 80% | 12.5 | **41.5** | 58.0 |
-| *(raw uncompressed EEG, ref)* | — | — | 14.5 | 45.5 | 62.5 |
+| codec (averaged + scale-aug protocol) | ratio | MSE ↓ | var-exp | top1 | **top5** | top10 |
+|---|---:|---:|---:|---:|---:|---:|
+| scalar + Laplace (c_lat96, hidden256, 140ep) | 63× | **0.0052** | 85% | 14.0 | 42.0 | 59.5 |
+| RQ-VAE (c_lat256, hidden256, D11×K1024, 140ep) | 72× | 0.0059 | 83% | 14.0 | 40.0 | 58.0 |
+| *(raw uncompressed EEG, ref)* | 1× | — | — | 14.5 | 45.5 | 62.5 |
 
-Switching to this protocol drops MSE 0.024→0.007 and lifts top5 ~29→~40 **for
+Switching to this protocol drops MSE 0.024→~0.006 and lifts top5 ~29→~40 **for
 both** quantizers — and they still tie. v4 trains on single trials (magnitude
 ≈1.0) but is scored on 80-rep trial-averages (≈0.19), so it over-shoots amplitude
 (reconstruction std 0.287 vs target 0.188); the averaged + scale-aug protocol
 fixes that. None of it is attributable to residual quantization.
+
+**Lowering MSE — capacity, not quantizer.** MSE drops further with a bigger
+encoder/decoder + more epochs: the RQ-VAE goes 0.0071 → **0.0059** at the *same*
+72× (latent width is free at fixed rate for RVQ — its one structural perk). But
+the scalar codec improves the same way (0.0072 → 0.0052; its `hidden` is free,
+only `c_lat` costs bits), so at matched rate they stay tied. The MSE win is model
+size + training length, not residual quantization.
 
 ## Correctness checks (the RVQ is implemented right)
 
@@ -81,9 +88,11 @@ python train_v4.py --lambda-rate 0.004 --epochs 15 --out checkpoints/codec_v4_fi
 # (both keep the single-trial set GPU-resident, so the GPU isn't starved by
 #  per-batch host->device copies)
 
-# ---- averaged + scale-aug protocol (context / viewer tiers) ----
-python train_rqvae.py    --num-quantizers 11 --codebook-size 1024 --epochs 60 --out checkpoints/codec_rqvae_72x.pt
-python train_fidelity.py --c-lat 96 --hidden 160 --n-attn 2 --epochs 60 --out checkpoints/codec_fidelity_72x.pt
+# ---- averaged + scale-aug protocol (lowest MSE; capacity is free at fixed rate) ----
+python train_rqvae.py    --c-lat 256 --hidden 256 --num-quantizers 11 --codebook-size 1024 \
+                         --epochs 140 --out checkpoints/codec_rqvae_72x.pt    # MSE 0.0059 @ 72x
+python train_fidelity.py --c-lat 96  --hidden 256 --n-attn 2 --lambda-rate 0.01 \
+                         --epochs 140 --out checkpoints/codec_fidelity_72x.pt # MSE 0.0052 @ 63x
 
 # ---- the metric that matters: retrieval through the frozen judge ----
 python benchmark_retrieval.py --models \

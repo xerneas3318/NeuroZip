@@ -388,12 +388,13 @@ def _ensure_state():
 
 
 def _root_html() -> str:
-    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean|dc|dark."""
+    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean|dc|pitch|dark."""
     home = os.environ.get("NEUROZIP_HOME", "dark").lower()
     return {
         "clean": "demo_clean.html",
         "dc":    "NeuroZip.dc.html",
         "v2":    "NeuroZip.dc.html",
+        "pitch": "pitch.html",
         "dark":  "demo.html",
     }.get(home, "demo.html")
 
@@ -413,6 +414,19 @@ def index_clean():
 def index_dc():
     """v2 design: ported NeuroZip.dc.html with codec workspace."""
     return send_file(ROOT / "NeuroZip.dc.html")
+
+
+@app.get("/pitch")
+def index_pitch():
+    """Hero pitch page — single-page 'type a word → see the brain recording'
+    with the biology figures below. Bio-hackathon framing."""
+    return send_file(ROOT / "pitch.html")
+
+
+@app.get("/plots/<path:p>")
+def plots(p):
+    """Serve plots/phase{0,1}_*.png so the pitch page can <img> them."""
+    return send_from_directory(ROOT / "plots", p)
 
 
 @app.get("/dark")

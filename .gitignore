@@ -33,3 +33,4 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+data_fmri/

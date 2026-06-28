@@ -36,6 +36,7 @@ def main():
     ap.add_argument("--n-attn", type=int, default=0)
     ap.add_argument("--lambda-rate", type=float, default=0.02)
     ap.add_argument("--smooth", type=float, default=0.0)
+    ap.add_argument("--n-down", type=int, default=3)
     ap.add_argument("--out", default="checkpoints/fmri_codec.pt")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
@@ -45,7 +46,7 @@ def main():
     train, val, meta = load_fmri(smooth_sigma=args.smooth)
     tr = torch.from_numpy(train).to(device); va = torch.from_numpy(val).to(device)
     print(f"device={device}  train={meta['n_train']} val={meta['n_val']}  (200 ROIs × 128 TRs)")
-    codec = fMRICodec(n_roi=N_ROI, c_lat=args.c_lat, hidden=args.hidden, n_attn=args.n_attn).to(device)
+    codec = fMRICodec(n_roi=N_ROI, c_lat=args.c_lat, hidden=args.hidden, n_attn=args.n_attn, n_down=args.n_down).to(device)
     print(f"v4 fMRICodec c_lat={args.c_lat} hidden={args.hidden} n_attn={args.n_attn} "
           f"params={sum(p.numel() for p in codec.parameters())}")
     opt = torch.optim.Adam(codec.parameters(), lr=args.lr)
@@ -67,7 +68,7 @@ def main():
         if mse < best:
             best = mse
             torch.save({"model": codec.state_dict(),
-                        "config": {"c_lat": args.c_lat, "hidden": args.hidden, "n_attn": args.n_attn, "n_roi": N_ROI, "smooth": args.smooth},
+                        "config": {"c_lat": args.c_lat, "hidden": args.hidden, "n_attn": args.n_attn, "n_roi": N_ROI, "smooth": args.smooth, "n_down": args.n_down},
                         "meta": {"mean": meta["mean"], "std": meta["std"]},
                         "final_val": {"mse": mse, "ratio": ratio, "var_exp": ve}}, args.out)
         if epoch % max(args.epochs // 12, 1) == 0 or epoch == 1:

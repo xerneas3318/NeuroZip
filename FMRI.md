@@ -14,34 +14,41 @@ downloads the per-subject `.1D` files (T TRs × 200 ROIs) and splits each into
 overlapping 64-TR windows → `(200, 64)` epochs, per-ROI z-scored. ~800 subjects →
 ~3,900 windows.
 
-## Result (held-out; spikes winsorized ±6σ, target band-limited to the BOLD band)
+## Result (held-out; spikes winsorized ±6σ, band-limited target, 4× temporal)
 
 | metric | value |
 |---|---|
-| reconstruction MSE | **0.21** (raw target was 0.46) |
-| variance explained | **56%** |
-| compression vs float16 | **123×** |
-| original / compressed | 25.6 KB → 0.21 KB per window |
+| reconstruction MSE | **0.163** (started at 0.50) |
+| variance explained | **65%** (started at 51%) |
+| compression vs float16 | **58×** |
 
-## Lowering the MSE — the target was full of noise
+## Why the MSE started high — and what actually fixed it
 
-The raw 0.46 MSE was the codec being forced to fit high-frequency noise. BOLD
-lives below ~0.1 Hz, so band-limiting the target (a standard fMRI preprocessing
-step) is the right move — and it cuts MSE ~4× (`results/fmri_smoothing.png`):
+I diagnosed it instead of guessing (PCA on the held-out data vs the codec):
 
-| temporal low-pass (σ, TR) | FWHM | MSE |
-|---|---|---|
-| 0 (raw) | 0 | 0.48 |
-| 1.0 | ~5 s | 0.31 |
-| **1.5** | **~7 s (≈ HRF width)** | **0.22** |
-| 2.5 | ~12 s | 0.12 |
+- **The codec was already ~linear-optimal for its bitrate.** At matched
+  compression, linear PCA gives MSE ~0.23 and the codec gave 0.21 — so it wasn't
+  underfitting. The data is just **high-rank**: spatial PCA needs 20 components
+  for 56% variance, 100 for 87%. Resting-state ROIs are largely independent, so
+  there isn't much redundancy to exploit — that's the honest reason it's harder
+  than ECG/EEG.
+- **But two things were inflating MSE and were fixable** (`results/fmri_mse_improvement.png`):
+  1. **Noise in the target.** BOLD is <0.1 Hz; high-freq content is noise the
+     codec was forced to fit. Band-limiting (σ=1.5 ≈ HRF width) → 0.46 → 0.21.
+  2. **An 8× temporal bottleneck.** 64 TRs → 8 latent timepoints kept only 70% of
+     the temporal variance *before the codec even tried.* Keeping more (4×→16,
+     2×→32 latent timepoints) improves **both** MSE and variance-explained:
 
-Honest caveat: filtering also shrinks the target's total variance, so
-*variance-explained* rises only modestly (51%→56%) — the big win is in absolute
-MSE, by not asking the codec to reconstruct noise. Other SNR levers that would
-help further: a **coarser parcellation** (more voxels averaged per ROI),
-**task fMRI** (event-locked, repeatable signal), or **attention across ROIs**
-(predict each region from its functional-network neighbors).
+     | temporal | latent_t | MSE | variance | ratio |
+     |---|---|---|---|---|
+     | 8× | 8 | 0.204 | 57% | 120× |
+     | **4×** | 16 | **0.163** | **65%** | 58× |
+     | 2× | 32 | 0.140 | 70% | 29× |
+
+Net: **MSE 0.50 → 0.163, variance 51% → 65%.** The remaining error is the genuine
+high-rank floor; pushing lower means spending bits (2× temporal → 0.140 @ 29×) or
+changing the signal — coarser parcellation, task fMRI (repeatable), or ROI
+attention.
 
 ## Why the MSE doesn't go lower — it's a noise floor, not a bit budget
 
@@ -70,13 +77,13 @@ How well the *same* v4 codec compresses is a direct readout of signal redundancy
 |---|---|---|---|
 | ECG | 12 × 250 | 96% | 31× (periodic) |
 | EEG | 63 × 250 | 66% | 70× |
-| **fMRI** | **200 × 64** | **51%** | **95×** (partial — noise floor) |
+| **fMRI** | **200 × 64** | **65%** | **58×** |
 | protein seq | 20 × 250 | — | ~1× (max-entropy) |
 
 ## Run
 
 ```bash
 python fmri_data.py                                # download ABIDE + build cache
-python train_fmri.py --epochs 100 --c-lat 128 --hidden 192 --lambda-rate 0.01 --smooth 1.5
+python train_fmri.py --epochs 100 --c-lat 128 --hidden 192 --lambda-rate 0.01 --smooth 1.5 --n-down 2
 ./serve_fmri.sh        # demo on http://localhost:8011/
 ```

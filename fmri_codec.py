@@ -21,25 +21,28 @@ N_TIMES = 64       # TRs per window (64 = 8*8, downsamples to 8)
 
 
 class fMRIEncoder(nn.Module):
-    """(B, 200, 128) -> (B, c_lat, 8). Same as EEGEncoder, in_ch=200, len 128."""
+    """(B, 200, 64) -> (B, c_lat, 64/2**n_down). n_down stride-2 stages set the
+    temporal downsampling (3 -> 8x like EEG, 2 -> 4x keeps more temporal detail)."""
 
-    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4):
+    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4, n_down=3):
         super().__init__()
         self.stem = nn.Sequential(
             nn.Conv1d(n_roi, hidden, kernel_size=15, padding=7),
             nn.GroupNorm(8, hidden), nn.GELU())
-        self.body = nn.Sequential(                              # 64 -> 32 -> 16 -> 8
-            ConvNormAct(hidden, hidden, k=5, stride=2),
-            ConvNormAct(hidden, hidden * 2, k=5, stride=2),
-            ConvNormAct(hidden * 2, hidden * 2, k=3, stride=2))
+        body, cin = [], hidden
+        for i in range(n_down):
+            cout = hidden if i == 0 else hidden * 2
+            body.append(ConvNormAct(cin, cout, k=5 if i < 2 else 3, stride=2)); cin = cout
+        self.body = nn.Sequential(*body)
+        self.enc_out = cin
         self.n_attn = n_attn
         if n_attn > 0:
-            self.attn = TransformerStack(dim=hidden * 2, n_layers=n_attn, max_len=32, n_heads=attn_heads)
-        self.to_latent = nn.Conv1d(hidden * 2, c_lat, kernel_size=1)
+            self.attn = TransformerStack(dim=cin, n_layers=n_attn, max_len=32, n_heads=attn_heads)
+        self.to_latent = nn.Conv1d(cin, c_lat, kernel_size=1)
         self.c_lat = c_lat
 
     def forward(self, x):
-        x = self.body(self.stem(x))                            # 128 -> 16 (no pad needed)
+        x = self.body(self.stem(x))
         if self.n_attn > 0:
             x = self.attn(x.transpose(1, 2)).transpose(1, 2)
         return self.to_latent(x)
@@ -48,16 +51,18 @@ class fMRIEncoder(nn.Module):
 class fMRIDecoder(nn.Module):
     """(B, c_lat, 8) -> (B, 200, 64). Mirror of fMRIEncoder."""
 
-    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4):
+    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4, n_down=3):
         super().__init__()
-        self.from_latent = nn.Conv1d(c_lat, hidden * 2, kernel_size=1)
+        enc_out = hidden if n_down == 1 else hidden * 2
+        self.from_latent = nn.Conv1d(c_lat, enc_out, kernel_size=1)
         self.n_attn = n_attn
         if n_attn > 0:
-            self.attn = TransformerStack(dim=hidden * 2, n_layers=n_attn, max_len=32, n_heads=attn_heads)
-        self.body = nn.Sequential(                              # 8 -> 16 -> 32 -> 64
-            ConvNormAct(hidden * 2, hidden * 2, k=4, stride=2, transpose=True),
-            ConvNormAct(hidden * 2, hidden, k=4, stride=2, transpose=True),
-            ConvNormAct(hidden, hidden, k=4, stride=2, transpose=True))
+            self.attn = TransformerStack(dim=enc_out, n_layers=n_attn, max_len=32, n_heads=attn_heads)
+        body, cin = [], enc_out
+        for j in range(n_down):                                # mirror: upsample n_down times
+            cout = hidden if j == n_down - 1 else hidden * 2
+            body.append(ConvNormAct(cin, cout, k=4, stride=2, transpose=True)); cin = cout
+        self.body = nn.Sequential(*body)
         self.head = nn.Sequential(
             nn.Conv1d(hidden, hidden, kernel_size=7, padding=3), nn.GELU(),
             nn.Conv1d(hidden, n_roi, kernel_size=1))
@@ -72,12 +77,13 @@ class fMRIDecoder(nn.Module):
 class fMRICodec(nn.Module):
     """Same structure as EEGCodec. n_attn=0 = conv-only v4 codec."""
 
-    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4):
+    def __init__(self, n_roi=N_ROI, c_lat=32, hidden=128, n_attn=0, attn_heads=4, n_down=3):
         super().__init__()
-        self.encoder = fMRIEncoder(n_roi, c_lat, hidden, n_attn, attn_heads)
-        self.decoder = fMRIDecoder(n_roi, c_lat, hidden, n_attn, attn_heads)
+        self.encoder = fMRIEncoder(n_roi, c_lat, hidden, n_attn, attn_heads, n_down)
+        self.decoder = fMRIDecoder(n_roi, c_lat, hidden, n_attn, attn_heads, n_down)
         self.prior = FactorizedLaplacePrior(c_lat=c_lat)
         self.c_lat, self.n_roi, self.n_times, self.n_attn = c_lat, n_roi, N_TIMES, n_attn
+        self.latent_t = N_TIMES // (2 ** n_down)
 
     def forward(self, x):
         y = self.encoder(x)
@@ -95,7 +101,7 @@ class fMRICodec(nn.Module):
         return x_hat, bits
 
     def latent_shape(self):
-        return (self.c_lat, 8)
+        return (self.c_lat, self.latent_t)
 
     def bpp_floor(self, bits_per_symbol):
-        return bits_per_symbol * self.c_lat * 8 / (self.n_roi * self.n_times)
+        return bits_per_symbol * self.c_lat * self.latent_t / (self.n_roi * self.n_times)

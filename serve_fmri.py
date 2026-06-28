@@ -44,7 +44,7 @@ h1{margin:0;font-size:1.7em;letter-spacing:-.5px}h1 span{color:var(--accent)}.su
 def load_codec(ckpt, device):
     ck = torch.load(ckpt, weights_only=False, map_location=device)
     c = ck["config"]
-    m = fMRICodec(n_roi=c["n_roi"], c_lat=c["c_lat"], hidden=c["hidden"], n_attn=c["n_attn"]).to(device)
+    m = fMRICodec(n_roi=c["n_roi"], c_lat=c["c_lat"], hidden=c["hidden"], n_attn=c["n_attn"], n_down=c.get("n_down", 3)).to(device)
     m.load_state_dict(ck["model"]); m.eval()
     return m, ck
 
@@ -55,7 +55,7 @@ def _compute(i):
         y = torch.round(m.encoder(x))
         xh = m.decoder(y)
         bps = float(m.prior.bits(y).cpu())
-    comp_bits = bps * m.c_lat * 8
+    comp_bits = bps * m.c_lat * m.latent_t
     xo = x[0].cpu().numpy(); xr = xh[0].cpu().numpy()
     mse = float(((xo - xr) ** 2).mean())
     return {"xo": xo, "xr": xr, "lat": y[0].cpu().numpy(), "mse": mse, "comp_bits": comp_bits}

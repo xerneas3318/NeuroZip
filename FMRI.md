@@ -50,24 +50,22 @@ high-rank floor; pushing lower means spending bits (2× temporal → 0.140 @ 29�
 changing the signal — coarser parcellation, task fMRI (repeatable), or ROI
 attention.
 
-## Why the MSE doesn't go lower — it's a noise floor, not a bit budget
+## Aside: spending more *spatial* bits is flat — temporal was the lever
 
-The rate–distortion curve is **flat** (`results/fmri_rate_distortion.png`):
+Before finding the temporal bottleneck, sweeping spatial capacity (`c_lat`, at a
+fixed 8× temporal) looked like a noise floor (`results/fmri_rate_distortion.png`):
 
-| capacity | MSE | variance explained | compression |
+| c_lat (8× temporal) | MSE | variance | compression |
 |---|---|---|---|
-| c_lat=256 | 0.450 | 52% | 39× |
-| **c_lat=128** | **0.459** | **51%** | **95×** |
-| c_lat=64 | 0.558 | 40% | 317× |
+| 256 | 0.450 | 52% | 39× |
+| 128 | 0.459 | 51% | 95× |
+| 64 | 0.558 | 40% | 317× |
 
-Going 95× → 39× spends **2.4× more bits and improves MSE by 0.009**. The codec
-already extracts essentially all the *compressible* structure; the remaining ~48%
-is irreducible resting-state noise (thermal, physiological, residual motion). Two
-diagnostics confirm it: motion spikes (|z|>5, just 0.35% of samples) carried 21%
-of the squared energy before winsorizing, and the *median* window already
-reconstructs at 0.33 MSE (67% variance) — the mean is dragged up by a few
-motion-corrupted windows. So 95× is near rate–distortion-optimal: more bits are
-wasted on noise. See the residual in `results/fmri_panels.png`.
+39× → 95× barely moved MSE — so *more spatial channels* don't help. That's what
+made the **temporal** axis the real fix (above): the 8× downsampling, not the
+spatial latent, was the binding constraint. Also worth noting: the *median*
+window already reconstructs at 0.33 MSE — the mean is dragged up by a few
+motion-corrupted windows.
 
 ## Where fMRI sits — the redundancy spectrum
 

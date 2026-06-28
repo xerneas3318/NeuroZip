@@ -45,7 +45,7 @@ def build_cache(win=N_TIMES, stride=N_TIMES // 2, cache=CACHE):   # overlap -> m
     return W
 
 
-def load_fmri(val_frac=0.05, seed=0, rebuild=False):
+def load_fmri(val_frac=0.05, seed=0, rebuild=False, clip=6.0):
     if rebuild or not os.path.exists(CACHE):
         W = build_cache()
     else:
@@ -58,6 +58,9 @@ def load_fmri(val_frac=0.05, seed=0, rebuild=False):
     std = train.std((0, 2), keepdims=True) + 1e-6
     train = (train - mean) / std
     val = (val - mean) / std
+    if clip:                       # winsorize motion spikes (standard fMRI scrubbing)
+        train = np.clip(train, -clip, clip)
+        val = np.clip(val, -clip, clip)
     meta = {"n_train": len(train), "n_val": len(val), "n_roi": N_ROI, "n_times": N_TIMES,
             "mean": mean, "std": std}
     return train, val, meta

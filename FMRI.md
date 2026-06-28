@@ -14,13 +14,26 @@ downloads the per-subject `.1D` files (T TRs × 200 ROIs) and splits each into
 overlapping 64-TR windows → `(200, 64)` epochs, per-ROI z-scored. ~800 subjects →
 ~3,900 windows.
 
-## Result (held-out; spikes winsorized ±6σ, band-limited target, 4× temporal)
+## Result (held-out; spikes winsorized ±6σ, band-limited target, 2× temporal)
 
 | metric | value |
 |---|---|
-| reconstruction MSE | **0.163** (started at 0.50) |
-| variance explained | **65%** (started at 51%) |
-| compression vs float16 | **58×** |
+| reconstruction MSE | **0.099** (started at 0.50) |
+| variance explained | **79%** (started at 51%) |
+| compression vs float16 | **8×** |
+
+Latent budget trades compression for MSE directly — pick the operating point:
+
+| c_lat | MSE | variance | compression |
+|---|---|---|---|
+| 128 | 0.163 | 65% | 58× |
+| 256 | 0.121 | 74% | 11× |
+| **384** | **0.099** | **79%** | **8×** |
+| 512 (overcomplete) | 0.094 | 80% | 6× |
+
+MSE flattens at ~0.09 / 80% even with an over-complete latent — that residual is
+the irreducible noise. Headline is c_lat=384 (sub-0.1 MSE, still 8×); use c_lat=128
+for the high-compression 58× point.
 
 ## Why the MSE started high — and what actually fixed it
 
@@ -75,7 +88,7 @@ How well the *same* v4 codec compresses is a direct readout of signal redundancy
 |---|---|---|---|
 | ECG | 12 × 250 | 96% | 31× (periodic) |
 | EEG | 63 × 250 | 66% | 70× |
-| **fMRI** | **200 × 64** | **65%** | **58×** |
+| **fMRI** | **200 × 64** | **79%** | **8×** (or 65% @ 58×) |
 | protein seq | 20 × 250 | — | ~1× (max-entropy) |
 
 ## Run

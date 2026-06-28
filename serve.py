@@ -294,13 +294,32 @@ def fig_latent_grid(epoch_idx: int, model_names: list[str]) -> str:
     return fig_to_b64(fig)
 
 
-def fig_eeg_single(eeg: np.ndarray, title: str = "EEG epoch", color="#161a22") -> str:
+def fig_eeg_single(eeg: np.ndarray, title: str = "EEG epoch", color="#161a22",
+                    theme: str = "dark") -> str:
     """Compact single-EEG figure: heatmap on top, 4 channel waveforms below.
 
     Used by the codec workspace to preview the loaded file, the codec's
-    reconstruction, and the decompressed output. Same renderer for all three
-    so the user can compare them visually at a glance.
+    reconstruction, and the decompressed output. Same renderer for all three.
+    `theme="light"` swaps to a white background (used by the pitch hero).
     """
+    light = (theme == "light")
+    bg       = "#ffffff" if light else "#161922"
+    fg_title = "#0e0e10" if light else "#e6e8ee"
+    fg_label = "#3a3a44" if light else "#bfc4d2"
+    fg_tick  = "#3a3a44" if light else "#d0d2d8"
+    spine    = "#cccccc" if light else "#444a5e"
+    axbg     = "#fafafa" if light else "#0f1115"
+    line_pal = (["#0e0e10", "#d62728", "#1f9d55", "#d97706"] if light
+                else ["#e6e8ee", "#d62728", "#4caf50", "#ff9f43"])
+    legend_bg = "#ffffff" if light else "#0f1115"
+
+    def _style(ax):
+        ax.set_facecolor(axbg)
+        for s in ax.spines.values(): s.set_color(spine)
+        ax.tick_params(colors=fg_tick, labelsize=8)
+        ax.title.set_color(fg_title)
+        ax.xaxis.label.set_color(fg_label); ax.yaxis.label.set_color(fg_label)
+
     fig = plt.figure(figsize=(8.2, 4.0))
     gs = fig.add_gridspec(2, 1, height_ratios=[2.4, 1.0], hspace=0.42)
     ax_h = fig.add_subplot(gs[0])
@@ -309,23 +328,23 @@ def fig_eeg_single(eeg: np.ndarray, title: str = "EEG epoch", color="#161a22") -
     vmax = float(np.abs(eeg).max()) if eeg.size else 1.0
     im = ax_h.imshow(eeg, aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax,
                      extent=[-200, 996, 63, 0])
-    ax_h.set_title(title, fontsize=10, loc="left", color="#e6e8ee", pad=4)
+    ax_h.set_title(title, fontsize=10, loc="left", color=fg_title, pad=4)
     ax_h.set_ylabel("channel")
-    style_axes(ax_h)
+    _style(ax_h)
 
     t_ms = np.linspace(-200, 996, eeg.shape[1])
-    for ch, c in zip([10, 25, 40, 55], ["#e6e8ee", "#d62728", "#4caf50", "#ff9f43"]):
+    for ch, c in zip([10, 25, 40, 55], line_pal):
         ax_w.plot(t_ms, eeg[ch], lw=1.0, color=c, label=f"ch {ch}")
-    ax_w.axvline(0, color="#444a5e", lw=0.7)
+    ax_w.axvline(0, color=spine, lw=0.7)
     ax_w.set_xlabel("time after stimulus (ms)")
-    ax_w.legend(loc="upper right", fontsize=8, framealpha=0.3, facecolor="#0f1115",
-                edgecolor="#444a5e", labelcolor="#e6e8ee", ncol=4)
-    style_axes(ax_w)
+    ax_w.legend(loc="upper right", fontsize=8, framealpha=0.6,
+                facecolor=legend_bg, edgecolor=spine, labelcolor=fg_label, ncol=4)
+    _style(ax_w)
 
     cb = fig.colorbar(im, ax=[ax_h], shrink=0.7, pad=0.02, label="σ (norm)")
-    cb.ax.tick_params(colors="#d0d2d8")
-    cb.set_label("σ (norm)", color="#bfc4d2")
-    fig.patch.set_facecolor("#161922")
+    cb.ax.tick_params(colors=fg_tick)
+    cb.set_label("σ (norm)", color=fg_label)
+    fig.patch.set_facecolor(bg)
     return fig_to_b64(fig)
 
 
@@ -738,13 +757,14 @@ def api_visualize_eeg():
     Returns: {"fig": <base64 png>}."""
     body = request.get_json(force=True)
     title = body.get("title", "EEG epoch")
+    theme = body.get("theme", "dark")
     if body.get("epoch_idx") is not None:
         # State.eeg_avg is already z-normalized — render directly.
         eeg_n = State.eeg_avg[int(body["epoch_idx"])].numpy()
     else:
         eeg_real, _ = _decode_input_eeg({"bytes_b64": body["bytes_b64"]})
         eeg_n = (eeg_real - State.norm_mean.numpy()[:, None]) / State.norm_std.numpy()[:, None]
-    return jsonify({"fig": fig_eeg_single(eeg_n, title)})
+    return jsonify({"fig": fig_eeg_single(eeg_n, title, theme=theme)})
 
 
 @app.get("/api/demo_epoch/<int:idx>")

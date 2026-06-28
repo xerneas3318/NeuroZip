@@ -1,6 +1,9 @@
-# NeuroZip — stage pitch (3:00 cut)
+# NeuroZip — stage pitch (short-demo cut)
 
-Runtime: ~2:45 spoken + 30 s for the two live-demo beats. ~15 s buffer.
+Runtime: ~2:10 spoken + 30 s for the two live-demo beats ≈ 2:40 total.
+The honest-slide (was slide 6) is cut for the short-demo slot; the
+weaknesses still live in the Q&A section below — raise them if a judge
+prompts, don't dwell on them on stage.
 
 This is the tightened version. Every claim aligned with
 [`plots/phase0_summary.json`](plots/phase0_summary.json),
@@ -73,20 +76,7 @@ haven't trained the cross-modal variant. If/when we do, this slide gets
 swapped for "ran the exact same method on fMRI; same result; meaning
 survives, fidelity doesn't.")
 
-## Slide 6 — the honest slide · 2:30 – 2:50
-
-> Where we're weak: one subject, trial-averaged, absolute top-5 is
-> 29 percent against a 45 percent raw-EEG ceiling. Modest. Counter-cut
-> in our own data: by single-channel ablation, fidelity leans on P8 by
-> twelve points; NeuroZip on no channel above three. Different lens,
-> different story, both in the repo. We headline waveform preservation
-> because that's what the codec was trained on; ablation answers a
-> different question.
-
-Deliver this **with confidence, not apology.** It's the slide that makes
-the rest credible.
-
-## Slide 7 — close · 2:50 – 3:00
+## Slide 7 — close · 2:30 – 3:00
 
 > NeuroZip: brain datasets two orders of magnitude smaller, still
 > searchable by language. Per-bit retrievability is the engineering
@@ -106,12 +96,12 @@ the rest credible.
 - [ ] Test the live pitch on the actual presentation machine, on the
       actual venue network, with the actual projector ~30 min before
       stage. Font loads + image cache matter.
-- [ ] Rehearse the cut script against a stopwatch. Target 2:45 spoken
-      + 0:30 demo = 3:15 max, with the 15 s buffer eating any slop.
-- [ ] Drill slide 6 specifically. It's the highest-value, easiest-to-
-      under-deliver line.
+- [ ] Rehearse the cut script against a stopwatch. Target 2:10 spoken
+      + 0:30 demo ≈ 2:40 total. End early rather than rush slide 7.
 - [ ] Don't expand slide 5. Everything you cut goes in Q&A; that's where
-      technical merit gets scored anyway.
+      technical merit gets scored anyway. The weaknesses-and-defenses
+      content that used to be slide 6 is now Q&A-only — be ready to
+      deliver it with the same confidence if a judge prompts.
 - [ ] Have `plots/phase2_permutation.png` ready as a slide-3 backup if a
       judge asks "how do you know that 4× isn't chance." The histogram
       is the answer.
@@ -219,15 +209,21 @@ metric isn't saturated at the tier in question.
   (verified by cosine distance: 0.98 to LAION-2B-encoded vs −0.06 to
   OpenAI).
 - The iso-rate table — full per-tier breakdown in `results.md`.
-- The ablation counter-cut — if a judge pushes on slide 6's
-  "different lens, different story", the longer answer: check-1 in
-  `plots/phase0_summary.json` measures *classifier robustness* (how
-  much does single-channel ablation hurt the downstream classifier),
-  while check-3 measures *waveform preservation* (how tight is the
-  per-channel reconstruction MSE). NeuroZip wins check-3 in visual
-  cortex; fidelity's classifier is more concentrated by check-1
-  because it leans on P8 specifically. Different cuts answering
-  different questions.
+- The ablation counter-cut — `plots/phase0_summary.json` has a
+  check-1 that cuts the other way: fidelity's downstream classifier
+  depends heavily on one occipital channel (P8, ~12 pp accuracy drop
+  if ablated), while no single channel ablation costs NeuroZip more
+  than ~3 pp. By that lens fidelity looks more visually concentrated
+  and NeuroZip more diffuse. Different question: check-1 measures
+  *classifier robustness*, check-3 measures *waveform preservation*.
+  NeuroZip wins check-3 (which is what the codec was actually trained
+  on) and looks less concentrated by check-1 because it spreads the
+  signal redundantly. Raise this only if a judge asks, since the
+  honest-slide that fronted it is cut from the short-demo runtime.
+- The honest weaknesses list — one subject, trial-averaged, top-5 is
+  29% against a 45% raw-EEG ceiling, retrieval edge is +4–11 pp not
+  +50. Used to live on slide 6. Deliver with the same confidence in
+  Q&A as you would on stage.
 
 If a judge asks "how does the codec actually compress," lead with
 **rate + MSE + task loss, three terms summed, factorized Laplace prior

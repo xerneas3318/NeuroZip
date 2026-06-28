@@ -339,9 +339,11 @@
   /* Footer */
   footer { background: #003366 !important; color: #cbd5e1 !important; padding: 8px 14px !important; border-top: 2px solid #002244 !important; font-family: "Courier New", monospace !important; text-align: left !important; }
 
-  /* Tabbed-page wrappers shouldn't double-border with their children */
+  /* Tabbed-page wrappers shouldn't double-border with their children.
+     NOTE: don't put `display: block !important` on #tab-workspace here —
+     that would override the JS-set `display: none` for the inactive tab. */
   #tab-demo, #tab-workspace { background: transparent !important; border: none !important; padding: 0 !important; }
-  #tab-demo > section, #tab-workspace { display: block !important; }
+  #tab-demo > section { display: block !important; }
 </style>
 </head>
 <body>

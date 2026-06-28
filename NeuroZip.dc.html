@@ -47,6 +47,26 @@
   .sidebar .nav-item.active { background: #161a22; color: #fff; }
   .sidebar .nav-item .ico { flex-shrink: 0; opacity: .9; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
   .sidebar .nav-item .meta { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; opacity: .55; }
+  .sidebar { overflow-y: auto; }
+  .sidebar .sb-kpi {
+    padding: 9px 12px;
+    border-bottom: 1px solid #d4d9e3;
+  }
+  .sidebar .sb-kpi:last-of-type { border-bottom: none; }
+  .sidebar .sb-kpi .k {
+    font-size: 9.5px; color: #8b92a4; font-weight: 600;
+    letter-spacing: .09em; text-transform: uppercase;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .sidebar .sb-kpi .v {
+    font-size: 19px; font-weight: 500; color: #161a22;
+    margin-top: 4px; font-family: 'IBM Plex Mono', monospace;
+    line-height: 1; letter-spacing: -0.01em;
+  }
+  .sidebar .sb-kpi .sub {
+    font-size: 10px; color: #8b92a4; margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: .02em;
+  }
   .sidebar .vault-foot {
     margin-top: auto; padding: 8px 10px;
     font-family: 'IBM Plex Mono', monospace; font-size: 10px;
@@ -120,18 +140,44 @@
       <span class="meta">/#workspace</span>
     </button>
 
+    <div class="section-label">live metrics</div>
+    <div class="sb-kpi">
+      <div class="k">NeuroZip top-5</div>
+      <div class="v" id="kpi-nzn-t5">—</div>
+      <div class="sub">task-aware</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">Fidelity top-5</div>
+      <div class="v" id="kpi-fid-t5">—</div>
+      <div class="sub">MSE-only baseline</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">retrieval lift</div>
+      <div class="v" id="kpi-lift">—</div>
+      <div class="sub">at matched tier</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">compression</div>
+      <div class="v" id="kpi-ratio">—</div>
+      <div class="sub" id="kpi-bpp">— bpp</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">judge ceiling</div>
+      <div class="v" id="kpi-ceiling">—</div>
+      <div class="sub">raw EEG, top-5</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">test concepts</div>
+      <div class="v">200</div>
+      <div class="sub">80 reps each</div>
+    </div>
+
     <div class="section-label">references</div>
     <a class="nav-item" href="https://huggingface.co/datasets/Haitao999/things-eeg" target="_blank" style="text-decoration:none;">
       <span class="ico" aria-hidden="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12a0 0 0 0 1-0 0H4z"/><polyline points="16,4 16,8 20,8"/></svg>
       </span>
       THINGS-EEG
-    </a>
-    <a class="nav-item" href="/dark" style="text-decoration:none;">
-      <span class="ico" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-      </span>
-      Dark theme
     </a>
 
     <div class="vault-foot">
@@ -152,39 +198,6 @@
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;white-space:nowrap;" id="hdr-meta">THINGS-EEG · sub-01</div>
   </header>
 
-  <!-- Sterile KPI strip -->
-  <section class="kpi-grid">
-    <div class="kpi-cell">
-      <div class="k">NeuroZip top-5</div>
-      <div class="v" id="kpi-nzn-t5">—</div>
-      <div class="sub">task-aware</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="k">Fidelity top-5</div>
-      <div class="v" id="kpi-fid-t5">—</div>
-      <div class="sub">MSE-only baseline</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="k">retrieval lift</div>
-      <div class="v" id="kpi-lift">—</div>
-      <div class="sub">at matched tier</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="k">compression</div>
-      <div class="v" id="kpi-ratio">—</div>
-      <div class="sub" id="kpi-bpp">— bpp</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="k">judge ceiling</div>
-      <div class="v" id="kpi-ceiling">—</div>
-      <div class="sub">raw EEG, top-5</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="k">test concepts</div>
-      <div class="v">200</div>
-      <div class="sub">80 reps each</div>
-    </div>
-  </section>
 
   <!-- Codec workspace -->
   <section id="tab-workspace" role="tabpanel" style="display:none;background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">

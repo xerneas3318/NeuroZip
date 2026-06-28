@@ -1,0 +1,13 @@
+torch>=2.0
+numpy
+pillow
+datasets
+open_clip_torch
+huggingface_hub
+matplotlib
+flask>=3.0
+
+
+# For notebook.ipynb (alternative to the Flask demo)
+jupyter
+nbformat

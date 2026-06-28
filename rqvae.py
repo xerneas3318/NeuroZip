@@ -30,9 +30,10 @@ from codec import EEGEncoder, EEGDecoder, N_CHANNELS, N_TIMES
 class VectorQuantizerEMA(nn.Module):
     """Single VQ codebook with EMA updates (stable, avoids codebook-loss tuning)."""
 
-    def __init__(self, dim, codebook_size, decay=0.99, eps=1e-5):
+    def __init__(self, dim, codebook_size, decay=0.99, eps=1e-5, restart_thresh=1.0):
         super().__init__()
         self.dim, self.K, self.decay, self.eps = dim, codebook_size, decay, eps
+        self.restart_thresh = restart_thresh
         embed = torch.randn(codebook_size, dim) * 0.1
         self.register_buffer("embed", embed)
         self.register_buffer("cluster_size", torch.zeros(codebook_size))
@@ -55,6 +56,18 @@ class VectorQuantizerEMA(nn.Module):
                 n = self.cluster_size.sum()
                 cs = (self.cluster_size + self.eps) / (n + self.K * self.eps) * n
                 self.embed.copy_(self.embed_avg / cs.unsqueeze(1))
+                # Dead-code restart (EnCodec/SoundStream): revive under-used
+                # entries from the live batch. Without this the codebook
+                # collapses to a handful of codes (observed: 6/1024), so the
+                # nominal D*log2(K) rate is mostly wasted and the reported
+                # compression ratio is dishonest.
+                dead = self.cluster_size < self.restart_thresh
+                if dead.any():
+                    n_dead = int(dead.sum())
+                    pick = torch.randint(0, flat.size(0), (n_dead,), device=flat.device)
+                    self.embed[dead] = flat[pick]
+                    self.embed_avg[dead] = flat[pick]
+                    self.cluster_size[dead] = 1.0
         q_st = x + (q - x).detach()                     # straight-through
         commit = F.mse_loss(q.detach(), x)              # commitment loss
         return q_st, idx.view(x.shape[:-1]), commit

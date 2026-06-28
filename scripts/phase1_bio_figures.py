@@ -4,6 +4,11 @@ Three slide-ready artifacts derived from already-computed v4 checkpoints.
 Run AFTER phase0_localization.py (uses plots/phase0_summary.json if
 present; recomputes if missing).
 
+The tier matters for honest reporting: bio numbers and the compression
+ratio quoted in the pitch must come from the same run. Default is `low`
+(matches the 144× headline). Pass `--tier med` or `--tier high` to
+recompute against another operating point and overwrite the artifacts.
+
 Outputs to plots/:
   phase1_erp_timeline.png   — hero: per-timepoint MSE with ERP windows
   phase1_topographic.png    — real 10-20 topographic map of NeuroZip's
@@ -13,7 +18,7 @@ Outputs to plots/:
 """
 
 from __future__ import annotations
-import json, sys
+import argparse, json, sys
 from pathlib import Path
 import numpy as np
 import torch
@@ -194,7 +199,7 @@ def fig_topographic(fid_ch: np.ndarray, nzn_ch: np.ndarray, save_to: Path):
 # ---------------------------------------------------------------------------
 # Figure 3: 3-panel composite "money slide"
 # ---------------------------------------------------------------------------
-def fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, save_to: Path):
+def fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, save_to: Path, nzn_ratio: int = 144):
     t_ms = np.linspace(-200, 996, N_TIMES)
 
     fig = plt.figure(figsize=(14, 5.2))
@@ -209,7 +214,7 @@ def fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, save_to: Path):
     ax1.axvline(0, color=INK, lw=0.7, alpha=.5)
     ax1.set_xlabel("ms after stimulus", fontsize=9)
     ax1.set_ylabel("MSE", fontsize=9)
-    ax1.set_title("WHEN it lives: ERP windows preserved 12–25% tighter",
+    ax1.set_title("WHEN: ERP windows preserved tighter under NeuroZip",
                   fontsize=10, color=INK, loc="left", pad=6, fontweight="bold")
     ax1.legend(fontsize=8, loc="upper right")
 
@@ -232,26 +237,36 @@ def fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, save_to: Path):
     # Panel 3: text summary card
     ax3 = fig.add_subplot(gs[0, 2])
     ax3.axis("off")
+    # Compute the displayed numbers from the data we just made, so this
+    # text never falls out of sync with the JSON when the tier changes.
+    visual_idx = [i for i, c in enumerate(CH_NAMES) if c in EXPECTED_VISUAL]
+    other_idx  = [i for i in range(N_CHANNELS) if i not in visual_idx]
+    vis_pct = (1 - nzn_ch[visual_idx].mean() / fid_ch[visual_idx].mean()) * 100
+    oth_pct = (1 - nzn_ch[other_idx].mean()  / fid_ch[other_idx].mean()) * 100
+    pref    = vis_pct / max(oth_pct, 1e-9)
+    t_ms = np.linspace(-200, 996, N_TIMES)
+    erp = lambda a, b: ((fid_t[(t_ms>=a)&(t_ms<=b)].mean() - nzn_t[(t_ms>=a)&(t_ms<=b)].mean())
+                        / fid_t[(t_ms>=a)&(t_ms<=b)].mean() * 100)
     summary_text = (
-        "  At 144× compression, NeuroZip-decompressed EEG\n"
-        "  retains 100% concept-identification accuracy\n"
-        "  on an independent classifier.\n\n"
-        "  WHERE that survives:\n"
-        f"     visual cortex MSE: 32% below fidelity\n"
-        f"     other channels:     7% below fidelity\n"
-        f"     spatial preference: 4.5× larger\n\n"
-        "  WHEN that survives:\n"
-        "     N170 (150–200 ms): 25.4% tighter\n"
-        "     P200 (200–260 ms): 17.8% tighter\n"
-        "     P100 (90–130 ms):  12.6% tighter\n"
-        "     P300 (280–400 ms): 12.1% tighter\n"
+        f"  At {nzn_ratio}× compression, NeuroZip preserves\n"
+        f"  visual-cortex EEG signal far tighter than\n"
+        f"  fidelity at matched architecture.\n\n"
+        "  WHERE the gap concentrates:\n"
+        f"     visual cortex MSE: {vis_pct:.1f}% below fidelity\n"
+        f"     other channels:    {oth_pct:.1f}% below fidelity\n"
+        f"     spatial preference: {pref:.1f}× larger\n\n"
+        "  WHEN it concentrates:\n"
+        f"     N170 (150–200 ms): {erp(150,200):.1f}% tighter\n"
+        f"     P200 (200–260 ms): {erp(200,260):.1f}% tighter\n"
+        f"     P100 (90–130 ms):  {erp(90,130):.1f}% tighter\n"
+        f"     P300 (280–400 ms): {erp(280,400):.1f}% tighter\n"
     )
     ax3.text(0.02, 0.98, "THE BIOLOGY", fontsize=11, color=RED, fontweight="bold",
               va="top", transform=ax3.transAxes)
     ax3.text(0.02, 0.88, summary_text, fontsize=10, color=INK, va="top",
               transform=ax3.transAxes, family="monospace", linespacing=1.45)
 
-    fig.suptitle("Object identity in EEG is spatially + temporally localized — and survives 144× compression",
+    fig.suptitle(f"NeuroZip preserves visual-cortex EEG signal tighter at {nzn_ratio}× compression — exactly where neuroscience predicts",
                  fontsize=13, color=INK, y=0.99, fontweight="normal")
     fig.savefig(save_to, dpi=140, bbox_inches="tight"); plt.close(fig)
 
@@ -259,13 +274,31 @@ def fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, save_to: Path):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+TIER_META = {
+    # tier → (fid_name, nzn_name, neurozip bpp, neurozip ratio)
+    "low":   ("fidelity_v4_low",   "neurozip_v4_low",   0.111, 144),
+    "med":   ("fidelity_v4_med",   "neurozip_v4_med",   0.190,  84),
+    "high":  ("fidelity_v4_high",  "neurozip_v4_high",  0.222,  72),
+    "xhigh": ("fidelity_v4_xhigh", "neurozip_v4_xhigh", 0.250,  64),
+}
+
+
 def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--tier", choices=list(TIER_META), default="low",
+                   help="Which v4 operating point to analyze. Default low "
+                        "(144×) so bio numbers align with the pitch's "
+                        "headline compression ratio.")
+    args = p.parse_args()
+    fid_name, nzn_name, nzn_bpp, nzn_ratio = TIER_META[args.tier]
+    print(f"[phase1] tier={args.tier} → {nzn_name} ({nzn_ratio}×, {nzn_bpp} bpp)")
+
     test = ThingsEEG(split="test")
     eeg_avg, _, _ = test.trial_averaged()                # (200, 63, 250)
 
     print("[phase1] computing per-channel + per-timepoint MSE…")
-    fid_ch, fid_t = per_channel_per_time_mse("fidelity_v4_med", eeg_avg)
-    nzn_ch, nzn_t = per_channel_per_time_mse("neurozip_v4_med", eeg_avg)
+    fid_ch, fid_t = per_channel_per_time_mse(fid_name, eeg_avg)
+    nzn_ch, nzn_t = per_channel_per_time_mse(nzn_name, eeg_avg)
 
     # Numerical summary
     visual_idx = [i for i, c in enumerate(CH_NAMES) if c in EXPECTED_VISUAL]
@@ -280,6 +313,9 @@ def main():
         for n, (a, b) in ERP_WINDOWS.items()
     }
     headline = {
+        "tier": args.tier,
+        "fid_codec": fid_name,
+        "nzn_codec": nzn_name,
         "spatial": {
             "visual_cortex_nzn_to_fid_mse_ratio": visual_ratio,
             "other_channels_nzn_to_fid_mse_ratio": other_ratio,
@@ -288,11 +324,16 @@ def main():
             "other_pct_better": (1 - other_ratio) * 100,
         },
         "temporal_erp_pct_tighter": erp_gaps,
-        "robustness": {
-            "neurozip_v4_med_holdout_top1": 1.00,
-            "neurozip_v4_med_compression_ratio": 84,
+        "compression": {
+            "neurozip_bpp": nzn_bpp,
+            "neurozip_compression_ratio": nzn_ratio,
         },
-        "tier_used": "v4_med (0.190 bpp neurozip, 0.154 bpp fidelity, ~85x compression)",
+        # Cached per-channel arrays so phase2_permutation can reuse them
+        # without re-running the codec forward passes.
+        "_per_channel_mse": {
+            "fidelity": fid_ch.tolist(),
+            "neurozip": nzn_ch.tolist(),
+        },
     }
     (OUT / "phase1_bio_numbers.json").write_text(json.dumps(headline, indent=2))
 
@@ -306,7 +347,8 @@ def main():
     print("[phase1] writing figures…")
     fig_erp_timeline(fid_t, nzn_t, OUT / "phase1_erp_timeline.png")
     fig_topographic(fid_ch, nzn_ch, OUT / "phase1_topographic.png")
-    fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, OUT / "phase1_summary.png")
+    fig_summary_composite(fid_t, nzn_t, fid_ch, nzn_ch, OUT / "phase1_summary.png",
+                          nzn_ratio=nzn_ratio)
     print(f"[phase1] done. plots written to {OUT}/phase1_*.png")
 
 

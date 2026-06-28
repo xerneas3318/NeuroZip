@@ -1,0 +1,31 @@
+{
+  "tier": "low",
+  "fid_codec": "fidelity_v4_low",
+  "nzn_codec": "neurozip_v4_low",
+  "K_permutations": 10000,
+  "seed": 0,
+  "n_visual_channels": 13,
+  "visual_channels": [
+    "Iz",
+    "O1",
+    "O2",
+    "Oz",
+    "P10",
+    "P7",
+    "P8",
+    "P9",
+    "PO3",
+    "PO4",
+    "PO7",
+    "PO8",
+    "POz"
+  ],
+  "statistic": "spatial_preference = (1 - visual_ratio) / (1 - other_ratio), ratio = NZN MSE / fidelity MSE",
+  "observed": 4.161554019019617,
+  "null_mean": 1.0413925298717435,
+  "null_median": 0.9875239158030387,
+  "null_95th": 2.119528869722049,
+  "null_max": 5.615704945002406,
+  "p_value_one_sided": 0.00029997000299970003,
+  "n_random_sets_at_or_above_observed": 2
+}

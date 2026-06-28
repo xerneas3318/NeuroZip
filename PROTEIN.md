@@ -30,21 +30,30 @@ with only standard amino acids, and encodes each to a `(20 × 250)` one-hot
 
 ## Result (held-out, no VQ/RQ — pure v4 scalar codec)
 
-Near-lossless reconstruction of protein sequences:
+Near-lossless reconstruction of real protein sequences:
 
 | metric | value |
 |---|---|
-| per-residue reconstruction accuracy | **99.9%** (chance = 5%) |
-| compression vs float16 one-hot | **~47×** |
+| per-residue reconstruction accuracy | **99.5%** (chance = 5%) |
+| compression vs float16 one-hot | **71×** |
 
-The same rate knob (`--lambda-rate`) trades accuracy for bits, exactly as on EEG —
-see `results/protein_rate_distortion.png`.
+Reconstructed sequences are character-for-character matches
+(`results/protein_reconstruction.png`):
+
+```
+orig:  MKTILPAVLFAAFATTSAWAAESVQPLEKIAPYPQAEKGMKRQVIQLTPQEDESTLKVELLIGQTLEVDC...  (len 162)
+recon: MKTILPAVLFAAFATTSAWAAESVQPLEKIAPYPQAEKGMKRQVIQLTPQEDESTLKVELLIGQTLEVDC...  100.0%
+```
+
+The same rate knob (`--lambda-rate`) trades accuracy for bits, exactly as on EEG
+(`results/protein_rate_distortion.png`): λ 0.02→0.5 stays ≥99.5% at 47–71×.
 
 ## Run
 
 ```bash
-python protein_data.py                              # download/parse + summary
-python train_protein.py --epochs 25 --lambda-rate 0.02   # v4 codec on proteins
+python protein_data.py                                   # download/parse + summary
+python train_protein.py --epochs 25 --lambda-rate 0.5    # v4 codec on proteins
+python make_protein_results.py                           # reconstruction demo figure
 ```
 
 ## Takeaway

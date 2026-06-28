@@ -33,3 +33,6 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# fMRI data (regenerable; see FMRI.md)
+data_fmri/

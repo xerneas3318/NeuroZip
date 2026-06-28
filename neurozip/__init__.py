@@ -9,7 +9,7 @@ lazily so importing the package never requires PyTorch:
     from neurozip import NeuroZipLayer   # needs the `ml` extra
 """
 
-__version__ = "0.2.0b3"
+__version__ = "0.2.0b4"
 
 __all__ = ["NeuroZipLayer", "__version__"]
 

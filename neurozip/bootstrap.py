@@ -42,8 +42,18 @@ def _python_has_torch(py: Path) -> bool:
         return False
 
 
+def _venv_version(py: Path) -> str | None:
+    try:
+        out = subprocess.check_output(
+            [str(py), "-c", "import neurozip,sys;sys.stdout.write(neurozip.__version__)"],
+            stderr=subprocess.DEVNULL)
+        return out.decode().strip()
+    except Exception:
+        return None
+
+
 def ensure_runtime() -> str | None:
-    """Ensure an interpreter with neurozip[ml] exists.
+    """Ensure an interpreter with the CURRENT neurozip[ml] exists.
 
     Returns the path to that interpreter if the CURRENT one lacks torch (caller should
     re-exec into it), or None if the current interpreter is already ML-capable.
@@ -51,17 +61,27 @@ def ensure_runtime() -> str | None:
     if has_torch():
         return None
 
+    from . import runtime as rt
+    from . import __version__ as cur
     d = venv_dir()
     py = _venv_python(d)
+    spec = f"neurozip[ml] @ {rt.SOURCE_URL}"
+
     if py.exists() and _python_has_torch(py):
+        if _venv_version(py) == cur:
+            return str(py)
+        # Brew was upgraded but the cached venv still runs old code -> update it.
+        print(f"[neurozip] updating inference environment to v{cur}...")
+        try:
+            subprocess.check_call([str(py), "-m", "pip", "install", "--upgrade", spec])
+        except subprocess.CalledProcessError as e:
+            print(f"[neurozip] update failed ({e}); continuing with the existing env.")
         return str(py)
 
-    from . import runtime as rt
     print("[neurozip] First-time setup: building the inference environment (one-time).")
-    print("[neurozip] Installing PyTorch + the model stack. This can take a few minutes...")
+    print("[neurozip] Installing PyTorch + deps. This can take a few minutes...")
     d.parent.mkdir(parents=True, exist_ok=True)
     venv.create(d, with_pip=True, clear=True)
-    spec = f"neurozip[ml] @ {rt.SOURCE_URL}"
     try:
         subprocess.check_call([str(py), "-m", "pip", "install", "--quiet", "--upgrade", "pip"])
         print("[neurozip] downloading and installing PyTorch + deps (large, please wait)...")

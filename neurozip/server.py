@@ -47,9 +47,6 @@ td:first-child,th:first-child{text-align:left}.nz{color:var(--nz)}.fid{color:var
 <header><h1>NeuroZip <span style="color:#3a4658;font-size:13px">v__VER__</span></h1>
 <div class="tag">Compress an EEG epoch with the trained task-aware codec and see what survives.</div></header>
 <div class="wrap">
-  <div id="drop">Drop an EEG epoch <b>.npy</b> (63&times;250) here, or pick a demo epoch below.
-    <div style="margin-top:10px"><input id="file" type="file" accept=".npy" style="display:none"/>
-    <button onclick="document.getElementById('file').click()">Choose .npy&hellip;</button></div></div>
   <div class="row">
     <label class="tag">demo epoch</label><select id="sample"></select>
     <label class="tag">tier</label><select id="tier"><option>low</option><option>med</option>
@@ -63,25 +60,17 @@ td:first-child,th:first-child{text-align:left}.nz{color:var(--nz)}.fid{color:var
   <div class="mut">Runs the real codec locally. neurozip = task-aware; fidelity = same bitrate, fidelity-only baseline.</div>
 </div>
 <script>
-let uploaded=null, variant="neurozip";
+let variant="neurozip";
 const seg=document.getElementById('variant');
 seg.addEventListener('click',e=>{if(e.target.dataset.v){variant=e.target.dataset.v;
   [...seg.children].forEach(b=>b.classList.toggle('on',b.dataset.v===variant));}});
-const drop=document.getElementById('drop');
-['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hot')}));
-['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hot')}));
-drop.addEventListener('drop',ev=>{ev.preventDefault();readFile(ev.dataTransfer.files[0])});
-document.getElementById('file').addEventListener('change',ev=>readFile(ev.target.files[0]));
-function readFile(f){if(!f)return;const r=new FileReader();
-  r.onload=()=>{uploaded=btoa(String.fromCharCode(...new Uint8Array(r.result)));
-    drop.innerHTML='loaded <b>'+f.name+'</b> — will compress your file';};r.readAsArrayBuffer(f);}
 async function loadSamples(){const r=await fetch('/api/samples');const d=await r.json();
   const s=document.getElementById('sample');s.innerHTML='';
   (d.concepts||[]).forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i+': '+c;s.appendChild(o);});}
 function card(k,v){return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`}
 async function run(){
-  const body={tier:document.getElementById('tier').value,variant:variant};
-  if(uploaded) body.npy_b64=uploaded; else body.sample_idx=parseInt(document.getElementById('sample').value);
+  const body={tier:document.getElementById('tier').value,variant:variant,
+    sample_idx:parseInt(document.getElementById('sample').value)};
   document.getElementById('out').innerHTML='<div class="mut">compressing…</div>';
   const r=await fetch('/api/compress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
@@ -133,8 +122,21 @@ def _codec(variant, tier):
     return _State.codecs[key]
 
 
+def _ensure_pkg(pkg: str):
+    """Import `pkg`, pip-installing it into the running interpreter on first miss."""
+    import importlib
+    try:
+        return importlib.import_module(pkg)
+    except ModuleNotFoundError:
+        import subprocess
+        import sys
+        print(f"[neurozip] installing {pkg} (one-time)...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", pkg])
+        return importlib.import_module(pkg)
+
+
 def _heatmap(raw, recon, concept):
-    import matplotlib
+    matplotlib = _ensure_pkg("matplotlib")
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np

@@ -23,7 +23,7 @@ MODELS_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
               "v0.2.0-beta.1/neurozip-models-v4.tar.gz")
 # Source tarball used to self-bootstrap the ML environment (must match this version).
 SOURCE_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
-              "v0.2.0-beta.3/neurozip-0.2.0-beta.3.tar.gz")
+              "v0.2.0-beta.4/neurozip-0.2.0-beta.4.tar.gz")
 
 
 def _progress(label):

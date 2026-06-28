@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neurozip"
-version = "0.2.0b3"
+version = "0.2.0b4"
 description = "Task-aware neural compression for brain/biomedical signals."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,8 +23,9 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-ml = ["numpy", "torch", "datasets", "open_clip_torch", "pillow"]
-dev = ["matplotlib", "tqdm"]
+# Just what the shipped CLI + upload UI need (kept lean so bootstrap is fast).
+ml = ["numpy", "torch", "matplotlib"]
+dev = ["datasets", "open_clip_torch", "pillow", "tqdm"]
 
 [project.urls]
 Homepage = "https://github.com/xerneas3318/NeuroZip"

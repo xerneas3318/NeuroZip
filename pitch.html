@@ -109,16 +109,30 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
 <body>
 <div class="app">
 
-  <!-- HERO -->
+  <!-- HERO  (mirrors slide 7's closing line as the persistent header subtitle) -->
   <header class="hero">
-    <div class="eyebrow">task-aware EEG compression</div>
-    <h1>Type a word.<br>Find the <span>brain recording</span>.</h1>
+    <div class="eyebrow">task-aware EEG compression · bio-hackathon</div>
+    <h1>Type a word.<br>Find a <span>thought</span>.</h1>
     <div class="lede">
-      Object identity in EEG survives <b>144× compression</b> with
-      <b>100% concept-identification accuracy</b> on an independent classifier.
-      Type a concept below to see it.
+      A neural EEG codec that compresses 144×, stays text-searchable, and
+      re-discovers — unsupervised — where in the brain object identity
+      lives. Read this page top-to-bottom and you're reading the 3-minute
+      pitch (slide-by-slide companion: <a href="https://github.com/anthropics/claude-code">pitch.md</a>).
     </div>
   </header>
+
+  <!-- ============ SLIDE 01 + 02 — the live demo ============ -->
+  <section class="bio" style="margin-bottom:24px;">
+    <div class="header">
+      <h2><span class="num">01 · 02</span>Type a word → find a thought · same EEG, two compressions</h2>
+      <div class="sub">
+        One second of human EEG — 63 electrodes, someone looking at a photo.
+        You can't read it. The model learned to align brain recordings with
+        the images people saw; the language model brings the words for free.
+        Type a concept and search both codecs side-by-side.
+      </div>
+    </div>
+  </section>
 
   <!-- QUERY -->
   <div class="query">
@@ -174,14 +188,16 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     </div>
   </div>
 
-  <!-- BIO #1: ERP timeline -->
+  <!-- ============ SLIDE 03 — where AND when the meaning lives ============ -->
   <section class="bio">
     <div class="header">
-      <h2><span class="num">01</span>When the meaning lives</h2>
+      <h2><span class="num">03</span>Where + when the meaning lives</h2>
       <div class="sub">
-        NeuroZip tightens reconstruction inside the four classical
-        visual-evoked ERP windows — the same ones neuroscience attributes
-        to object recognition.
+        We compressed 144-fold — throwing away everything but meaning — and
+        looked at what survived. It's not smeared across the brain. It
+        concentrates at occipitotemporal electrodes, biggest right at the
+        N170, 150–200 ms after stimulus — the window the brain identifies
+        objects. We used compression as a microscope.
       </div>
     </div>
     <div class="bio-stats">
@@ -204,23 +220,12 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     <div class="bio-fig">
       <img src="/plots/phase1_erp_timeline.png" alt="per-timepoint reconstruction MSE with ERP windows" />
       <div class="cap">
-        Red (NeuroZip) below gray (fidelity) at every post-stimulus timepoint;
-        biggest gap inside the N170 window. Pre-stimulus (−200 to 0 ms) is at
-        parity — no task signal there to preserve.
+        <b>When.</b> Red (NeuroZip) below gray (fidelity) at every post-stimulus
+        timepoint; biggest gap inside the N170 window. Pre-stimulus (−200 to 0 ms)
+        is at parity — no task signal there to preserve.
       </div>
     </div>
-  </section>
-
-  <!-- BIO #2: spatial / topographic -->
-  <section class="bio">
-    <div class="header">
-      <h2><span class="num">02</span>Where the meaning lives</h2>
-      <div class="sub">
-        NeuroZip's preservation concentrates over occipital + occipitotemporal
-        sites — where the visual system encodes object identity.
-      </div>
-    </div>
-    <div class="bio-stats">
+    <div class="bio-stats" style="margin-top:14px">
       <div class="stat">
         <div class="k">Visual cortex (13 ch)</div>
         <div class="v"><span class="small">−</span>32.4%</div>
@@ -237,26 +242,28 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
         <div class="desc">NeuroZip prefers visual cortex 4.7× more strongly than other regions for preservation.</div>
       </div>
     </div>
-    <div class="bio-fig">
+    <div class="bio-fig" style="margin-top:14px">
       <img src="/plots/phase1_topographic.png" alt="topographic head map of per-channel reconstruction error" />
       <div class="cap">
-        Three head maps, viewed from above. <b>Left:</b> fidelity's per-channel
-        error (big back-of-head blob = strong visual signal it fails to
-        preserve). <b>Center:</b> NeuroZip's error — same place, much smaller
-        blob. <b>Right:</b> the difference, red where NeuroZip wins — concentrated
+        <b>Where.</b> Three head maps, viewed from above. <b>Left:</b> fidelity's
+        per-channel error (big back-of-head blob = strong visual signal it fails to
+        preserve). <b>Center:</b> NeuroZip's error — same place, much smaller blob.
+        <b>Right:</b> the difference, red where NeuroZip wins — concentrated
         occipitally, as visual neuroscience would predict.
       </div>
     </div>
   </section>
 
-  <!-- BIO #3: robustness -->
+  <!-- ============ SLIDE 04 — 144× / 100% ============ -->
   <section class="bio">
     <div class="header">
-      <h2><span class="num">03</span>How much of it survives</h2>
+      <h2><span class="num">04</span>144× compression. 100% accuracy on an independent classifier.</h2>
       <div class="sub">
-        Separate classifier, different EEG split, different loss, different
-        head — never optimized against. Reads NeuroZip's compressed signal at
-        100%.
+        And that meaning is tiny. At 144× compression, a separate classifier —
+        different EEG split, different loss, different output head, never
+        optimized against — still reads the object the subject saw with
+        <b>100%</b> accuracy from our reconstruction. The fidelity baseline
+        drops to 88. The "what you saw" signal is low-dimensional and robust.
       </div>
     </div>
     <div class="bio-stats">
@@ -278,21 +285,87 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
     </div>
   </section>
 
-  <!-- RATE-RETRIEVAL (the engineering payoff) -->
+  <!-- ============ SLIDE 05 — the one-sentence "how" ============ -->
   <section class="bio">
     <div class="header">
-      <h2><span class="num">04</span>And the engineering numbers</h2>
+      <h2><span class="num">05</span>How it works · one sentence</h2>
       <div class="sub">
-        NeuroZip's text-prompt retrieval sits above the fidelity baseline at
-        every compression tier. The bigger the ratio, the larger the gap.
+        We put a <b>frozen judge</b> in the loop that scores whether the
+        meaning survived, and train the compressor against it — so the model
+        that decides what to keep is what lets you search by typing.
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);padding:24px 28px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;color:var(--ink);">
+EEG epoch ──► encoder ──► quantize ──► decoder ──► EEĜ ──► <span style="color:var(--accent)">P (frozen judge)</span> ──► ε̂<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">↑ gradient flows back</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">1 − cos(ε̂, CLIP_image(seen_image))</span><br><br>
+L  =  λ<sub>rate</sub> · bits  +  λ<sub>recon</sub> · ‖EEG − EEĜ‖²  +  λ<sub>task</sub> · (1 − cos(ε̂, ε*))
+    </div>
+    <div style="margin-top:10px;font-size:13px;color:var(--muted);">
+      P's weights stay frozen; the gradient does not. That's the only trick.
+      The same model that scores "did the meaning survive" at training is the
+      model that takes your free-text query at inference. See
+      <a href="https://github.com/anthropics/claude-code">ARCHITECTURE.md</a> for the full derivation,
+      the three correctness conditions, and the v1 → v4 evolution.
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 06 — the honest slide ============ -->
+  <section class="bio" style="border-left:3px solid var(--accent);padding-left:20px;">
+    <div class="header">
+      <h2><span class="num">06</span>Where we're weak — and why we trust it anyway</h2>
+      <div class="sub">
+        We'd rather you trust these numbers than be dazzled by them, so here's
+        the honest read.
+      </div>
+    </div>
+    <div class="bio-stats">
+      <div class="stat">
+        <div class="k">Subjects</div>
+        <div class="v">1</div>
+        <div class="desc">sub-01 of THINGS-EEG's 10. Pipeline is subject-agnostic, but we haven't run multi-subject. Cross-subject is the next overnight job.</div>
+      </div>
+      <div class="stat">
+        <div class="k">Trials</div>
+        <div class="v">trial-averaged</div>
+        <div class="desc">80 reps per concept, averaged. Single-trial decoding is harder; we don't claim to solve it. Codec contribution would carry; absolute numbers would drop.</div>
+      </div>
+      <div class="stat">
+        <div class="k">Retrieval edge</div>
+        <div class="v">+4–9 pp</div>
+        <div class="desc">Not +50. Honest magnitude. At iso-rate; bigger gaps when you don't control for bits.</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);padding:18px 22px;margin-top:14px;font-size:14px;line-height:1.6;color:var(--ink-2);">
+      <b style="color:var(--ink)">And we tried to catch ourselves cheating.</b> The retrieval metric runs
+      through the same projector we trained the codec against — that's the
+      circularity objection a sharp judge will raise. So we trained a
+      <b>separate classifier</b> on a different EEG split with a different loss
+      and a different output head, and never optimized the codec against it. At
+      144× compression it reads NeuroZip with <b style="color:var(--accent)">100%</b> and fidelity
+      with <b>88%</b>. That 12-point gap is measured against a judge whose only
+      relationship to training was that the codec was never asked to satisfy
+      it. The win survives in the regime where compression actually matters.
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 07 — close ============ -->
+  <section class="bio">
+    <div class="header">
+      <h2><span class="num">07</span>Close</h2>
+      <div class="sub">
+        NeuroZip: brain datasets two orders of magnitude smaller, searchable by
+        language — and a finding that object identity in the brain is
+        low-dimensional, localized, and robust. Type a word — find a thought.
       </div>
     </div>
     <div class="bio-fig">
       <img src="/demo/assets/rate_retrieval.png" alt="rate-retrieval curve" />
       <div class="cap">
-        x = bits per EEG sample (lower = more compressed). y = top-5 retrieval.
-        Red above gray everywhere; gap widens with compression. Full iso-rate
-        table in <a href="https://github.com/anthropics/claude-code">results.md</a>.
+        The engineering payoff. x = bits per EEG sample (lower = more
+        compressed). y = top-5 retrieval. Red above gray at every bpp; gap
+        widens as compression gets aggressive. Full per-tier breakdown:
+        <a href="https://github.com/anthropics/claude-code">results.md</a>.
       </div>
     </div>
   </section>
@@ -300,7 +373,7 @@ footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color
   <!-- DRILLDOWN -->
   <div class="drilldown">
     <div class="text">
-      Want the <b>live codec workspace</b> (compress / decompress your own EEG epochs) or the
+      Drill into the <b>live codec workspace</b> (compress / decompress your own EEG epochs) or the
       <b>full technical demo</b> (reconstruction viewer, latent inspector, every codec at every tier)?
     </div>
     <div class="links">

@@ -16,6 +16,7 @@ Task-aware neural compression of single-trial EEG. The codec is trained to prese
 
 ## Contents
 - [Abstract](#abstract)
+- [Installation](#installation)
 - [Method](#method)
   - [Architecture](#architecture)
   - [Objective](#objective)
@@ -41,6 +42,27 @@ Two results follow on THINGS-EEG (subject `sub-01`). First, the compressed corpu
 <p align="center"><img src="images/demo_interface.png" width="900" alt="Interactive demo: free-text to EEG retrieval, per-tier codec metrics, and the reconstruction viewer" /></p>
 
 The interactive demo (`serve_pitch.sh` / `serve_clean_v2.sh`): free-text to EEG retrieval with the task-aware codec and the fidelity baseline side by side (top), per-tier metrics for all codecs (middle), and a per-epoch reconstruction viewer (bottom). THINGS-EEG, subject `sub-01`, v4 codecs.
+
+## Installation
+
+The trained model is packaged as a standalone command-line tool. The core install is dependency-free; PyTorch is installed on first use.
+
+```bash
+brew install xerneas3318/tap/neurozip      # or: pip install "neurozip[ml]"
+neurozip download                           # fetch the trained v4 model bundle into ~/.neurozip
+```
+
+The first inference command builds an isolated PyTorch environment on demand and caches the model bundle. Subsequent commands:
+
+```bash
+neurozip info                               # codec tiers and measured scores
+neurozip serve                              # local UI: compress an EEG epoch and inspect the reconstruction
+neurozip compress epoch.npy -o out.nz --tier high
+neurozip decompress out.nz -o recon.npy
+neurozip embed epoch.npy                     # 512-d CLIP-space embedding from the frozen projector
+```
+
+This is the packaged tool; full training and the retrieval demo are described in [Reproduction](#reproduction).
 
 ## Method
 

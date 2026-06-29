@@ -13,7 +13,7 @@ task-aware codec beats a fidelity-only codec on text/image retrieval from the co
 Trained on THINGS-EEG (63 channels x 250 samples, ViT-B-32 CLIP space). Measured, at the `high`
 tier: **neurozip image top-1 = 0.14 vs fidelity 0.08** at ~the same bitrate.
 
-> Status: **v0.2.0-beta.1** - real trained models, real CLI, real upload UI.
+> Status: **v1.0.0** - real trained models, real CLI, real upload UI.
 
 ## Install
 

@@ -20,10 +20,10 @@ _PKG = Path(__file__).resolve().parent
 
 # Trained model bundle (projector + v4 codecs + scores + norm stats + demo samples).
 MODELS_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
-              "v0.2.0-beta.6/neurozip-models-v4.tar.gz")
+              "v1.0.0/neurozip-models-v4.tar.gz")
 # Source tarball used to self-bootstrap the ML environment (must match this version).
 SOURCE_URL = ("https://github.com/xerneas3318/NeuroZip/releases/download/"
-              "v0.2.0-beta.6/neurozip-0.2.0-beta.6.tar.gz")
+              "v1.0.0/neurozip-1.0.0.tar.gz")
 
 
 def _progress(label):

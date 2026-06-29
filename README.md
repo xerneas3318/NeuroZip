@@ -17,14 +17,31 @@ tier: **neurozip image top-1 = 0.14 vs fidelity 0.08** at ~the same bitrate.
 
 ## Install
 
+Pick one:
+
 ```bash
-brew install xerneas3318/tap/neurozip      # the CLI + UI (stdlib-only core)
-pip install "neurozip[ml]"                 # add the torch inference stack
-neurozip download                          # fetch the trained models -> ~/.neurozip
+# Homebrew
+brew install xerneas3318/tap/neurozip
+
+# curl (downloads the precompiled binary, no build)
+curl -fsSL https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/install.sh | bash
+
+# precompiled, no install at all (single self-contained file, runs on any python3)
+curl -fsSLO https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip.pyz
+chmod +x neurozip.pyz && ./neurozip.pyz --version
+
+# pip (prebuilt wheel)
+pip install https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip-1.0.0-py3-none-any.whl
 ```
 
-`brew`/core install is dependency-free. Real inference (compress, embed, the layer, the UI)
-needs the `ml` extra (torch) and the model bundle from `neurozip download`.
+Then fetch the trained model once:
+
+```bash
+neurozip download                          # trained model bundle -> ~/.neurozip
+```
+
+The core CLI is dependency-free. Real inference (compress, embed, the layer, the UI) sets up
+the PyTorch stack automatically on first use; `neurozip download` provides the model bundle.
 
 ## CLI
 

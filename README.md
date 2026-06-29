@@ -45,10 +45,21 @@ The interactive demo (`serve_pitch.sh` / `serve_clean_v2.sh`): free-text to EEG 
 
 ## Installation
 
-The trained model is packaged as a standalone command-line tool. The core install is dependency-free; PyTorch is installed on first use.
+The trained model is packaged as a standalone command-line tool, available through Homebrew, a curl installer, a precompiled single-file binary, or pip. The core install is dependency-free; PyTorch is set up on first inference use.
 
 ```bash
-brew install xerneas3318/tap/neurozip      # or: pip install "neurozip[ml]"
+# Homebrew
+brew install xerneas3318/tap/neurozip
+
+# curl (downloads the precompiled binary)
+curl -fsSL https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/install.sh | bash
+
+# precompiled, no install (single self-contained file, runs on any python3)
+curl -fsSLO https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip.pyz && chmod +x neurozip.pyz
+
+# pip (prebuilt wheel)
+pip install https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip-1.0.0-py3-none-any.whl
+
 neurozip download                           # fetch the trained v4 model bundle into ~/.neurozip
 ```
 

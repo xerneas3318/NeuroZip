@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NeuroZip - type what someone looked at, find the brain recording</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fafafa; --ink:#0e0e10; --ink-2:#3a3a44; --muted:#7c7d86;
+  --border:#e3e3e8; --accent:#d62728; --nzn:#d62728; --fid:#7c7d86;
+  --ok:#1f9d55; --hl:#1f9d55;
+  --surface:#fff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--ink)}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+h1{margin:0;font-size:38px;font-weight:600;letter-spacing:-0.025em;line-height:1.15;}
+h2{margin:0 0 12px;font-size:22px;font-weight:600;letter-spacing:-0.015em;}
+h3{margin:0 0 6px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;}
+
+.app{max-width:1100px;margin:0 auto;padding:64px 28px 96px;}
+
+/* HERO */
+header.hero{margin-bottom:48px;}
+header.hero .eyebrow{color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px;}
+header.hero h1 span{color:var(--accent)}
+header.hero .lede{color:var(--ink-2);font-size:18px;margin-top:16px;max-width:780px;line-height:1.55;}
+
+/* QUERY ROW */
+.query{background:var(--surface);border:1px solid var(--border);padding:24px;margin-bottom:14px;}
+.query label{display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;}
+.query .row{display:grid;grid-template-columns:1fr auto auto;gap:10px;}
+.query input{padding:14px 16px;border:1px solid var(--border);font-family:inherit;font-size:17px;color:var(--ink);background:var(--surface);}
+.query input:focus{outline:2px solid var(--accent);outline-offset:-2px;}
+.query button{padding:14px 22px;border:none;background:var(--ink);color:#fff;font:inherit;font-weight:600;font-size:14px;cursor:pointer;letter-spacing:.02em;}
+.query button:hover{background:var(--accent);}
+.query button.secondary{background:#fff;color:var(--ink);border:1px solid var(--border);}
+.query button.secondary:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.query .meta{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);min-height:1.4em;}
+
+/* SIDE-BY-SIDE RESULTS */
+.results{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.pane{background:var(--surface);border:1px solid var(--border);padding:22px;}
+.pane.us{border-top:3px solid var(--accent);}
+.pane.them{border-top:3px solid var(--fid);}
+.pane .pane-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;}
+.pane .pane-head .name{font-weight:600;font-size:15px;}
+.pane.us .pane-head .name{color:var(--accent);}
+.pane.them .pane-head .name{color:var(--fid);}
+.pane .pane-head .badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+.gt-strip{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:18px;}
+.gt-strip img{width:54px;height:54px;object-fit:cover;border:2px solid var(--ok);}
+.gt-strip .gt-text{font-size:13px;color:var(--muted);}
+.gt-strip .gt-text strong{display:block;color:var(--ink);font-weight:600;font-size:15px;text-transform:lowercase;margin-bottom:2px;}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+.card{position:relative;aspect-ratio:1;background:#f1f1f4;overflow:hidden;}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.card .rank{position:absolute;top:3px;left:3px;background:rgba(0,0,0,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;font-family:'JetBrains Mono',monospace;z-index:1;}
+.card .name{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.9),transparent);color:#fff;font-size:9px;padding:10px 4px 3px;font-weight:500;line-height:1.1;text-transform:lowercase;z-index:1;}
+.card.gold{outline:2px solid var(--ok);outline-offset:-2px;}
+.verdict{margin-top:18px;padding:12px 14px;background:#fafafa;border:1px solid var(--border);font-size:13px;color:var(--ink-2);line-height:1.5;}
+.verdict.win{border-left:3px solid var(--ok);}
+.verdict.miss{border-left:3px solid var(--accent);}
+
+/* INTERPRETATION BOX */
+.interp{background:var(--surface);border:1px solid var(--border);padding:24px 28px;margin-bottom:48px;}
+.interp .key{font-size:13px;color:var(--muted);margin-bottom:4px;font-weight:500;}
+.interp .body{font-size:17px;color:var(--ink);line-height:1.5;}
+.interp .body b{color:var(--accent);}
+
+/* BIO SECTION */
+section.bio{margin-bottom:48px;}
+section.bio .header{margin-bottom:20px;}
+section.bio h2{display:flex;align-items:baseline;gap:14px;}
+section.bio h2 .num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);font-weight:500;letter-spacing:.04em;}
+section.bio .sub{color:var(--muted);font-size:14px;margin-bottom:24px;max-width:760px;}
+
+.bio-fig{background:var(--surface);border:1px solid var(--border);margin-bottom:14px;}
+.bio-fig img{width:100%;display:block;}
+.bio-fig .cap{padding:12px 18px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-2);line-height:1.45;}
+.bio-fig .cap b{color:var(--ink);}
+
+.bio-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.bio-stats .stat{background:var(--surface);border:1px solid var(--border);padding:18px 20px;}
+.bio-stats .stat .k{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
+.bio-stats .stat .v{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:500;color:var(--ink);letter-spacing:-0.015em;line-height:1;margin-bottom:8px;}
+.bio-stats .stat .v .small{font-size:18px;color:var(--accent);}
+.bio-stats .stat .desc{font-size:12px;color:var(--ink-2);line-height:1.4;}
+
+/* DRILLDOWN */
+.drilldown{display:flex;gap:14px;padding:24px;background:var(--surface);border:1px solid var(--border);align-items:center;justify-content:space-between;}
+.drilldown .text{font-size:14px;color:var(--ink-2);}
+.drilldown .text b{color:var(--ink);}
+.drilldown .links{display:flex;gap:12px;}
+.drilldown a{padding:9px 16px;border:1px solid var(--border);font-size:13px;font-weight:500;text-decoration:none;color:var(--ink);}
+.drilldown a:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.6;}
+
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid #ddd;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Hero EEG band - visible brain-data evidence above the fold */
+.hero-eeg{margin:24px 0 14px;background:var(--surface);border:1px solid var(--border);overflow:hidden;}
+.hero-eeg-head{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+.hero-eeg-head .left{color:var(--ink-2);}
+.hero-eeg-head .left b{color:var(--accent);font-weight:500;}
+.hero-eeg img{width:100%;height:auto;display:block;}
+.hero-eeg .pulse{display:inline-block;width:8px;height:8px;background:#1f9d55;border-radius:50%;margin-right:8px;animation:pulse 1.6s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.hero-eeg .switcher{display:flex;gap:6px;}
+.hero-eeg .switcher button{padding:3px 9px;border:1px solid var(--border);background:#fff;color:var(--ink-2);font:inherit;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:.02em;}
+.hero-eeg .switcher button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.hero-eeg .switcher button:hover:not(.active){background:#fafafa;}
+
+/* Responsive: judges read this on tablets and phones. */
+@media (max-width: 820px) {
+  .app{padding:40px 18px 64px;}
+  h1{font-size:30px;}
+  header.hero .lede{font-size:16px;}
+  .results{grid-template-columns:1fr;}
+  .bio-stats{grid-template-columns:1fr;}
+  .cards{grid-template-columns:repeat(4,1fr);}
+  .query .row{grid-template-columns:1fr;}
+  .drilldown{flex-direction:column;align-items:flex-start;gap:14px;}
+  .drilldown .links{flex-wrap:wrap;}
+  .hero-eeg-head{flex-direction:column;align-items:flex-start;gap:8px;}
+}
+@media (max-width: 480px) {
+  h1{font-size:24px;}
+  header.hero .lede{font-size:15px;}
+  .cards{grid-template-columns:repeat(2,1fr);}
+  .pane{padding:16px;}
+  section.bio h2{font-size:18px;flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HERO  (mirrors slide 7's closing line as the persistent header subtitle) -->
+  <header class="hero">
+    <div class="eyebrow">task-aware EEG compression · bio-hackathon</div>
+    <h1>Type a word.<br>Find a <span>thought</span>.</h1>
+    <div class="lede">
+      A neural EEG codec. 144× smaller per epoch, still text-searchable.
+      The channels and time-windows it preserves tightest are exactly the
+      ones visual neuroscience would predict — read this as validation
+      that the task loss is shaping the codec correctly, not as an
+      unsupervised discovery of neurophysiology. Honest retrieval is 29%
+      top-5 against a 45% raw-EEG ceiling; the per-bit gap (NeuroZip vs
+      fidelity at iso-rate) is the load-bearing engineering claim.
+      Slide-by-slide companion:
+      <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/pitch.md">pitch.md</a>, LAN-only.
+    </div>
+  </header>
+
+  <!-- ============ HERO EEG BAND - visible brain data above the fold ============ -->
+  <div class="hero-eeg" id="hero-eeg" aria-label="Live EEG epoch from the THINGS-EEG test set">
+    <div class="hero-eeg-head">
+      <div class="left">
+        <span class="pulse"></span>
+        one second of human EEG  ·  63 electrodes  ·  subject saw <b id="hero-eeg-concept">…</b>
+      </div>
+      <div class="switcher" id="hero-eeg-switcher">
+        <!-- buttons injected on load: one per featured concept -->
+      </div>
+    </div>
+    <img id="hero-eeg-img" alt="EEG channel × time visualization" />
+  </div>
+
+  <!-- ============ SLIDE 01 + 02 - the live demo ============ -->
+  <section class="bio" style="margin-bottom:24px;">
+    <div class="header">
+      <h2><span class="num">01 · 02</span>Type a word → find a thought · same EEG, two compressions</h2>
+      <div class="sub">
+        One second of human EEG. 63 electrodes, someone looking at a photo.
+        You can't read it. The model learned to align brain recordings with
+        the images people saw; CLIP brings the words for free. Type a
+        concept and search both codecs side-by-side.
+      </div>
+    </div>
+  </section>
+
+  <!-- QUERY -->
+  <div class="query">
+    <label for="q">free-text query (a concept from the THINGS-EEG test set)</label>
+    <div class="row">
+      <input id="q" type="text" placeholder="e.g. ostrich, robot, basketball, dolphin…" />
+      <button id="go">Find brain recording</button>
+      <button id="rand" class="secondary">Random</button>
+    </div>
+    <div id="qmeta" class="meta">type a concept and press enter, or pick a featured one below</div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;" id="featured"></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.45;">
+      featured = the strongest NeuroZip cases on this checkpoint
+      (curated to land a compelling default; full list in
+      <code>demo/assets/summary.json</code>). <b>Random</b> samples uniformly
+      over all 200 test concepts — it will sometimes miss, which is expected
+      at 29% top-5 retrieval.
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results">
+    <div class="pane us">
+      <div class="pane-head">
+        <div class="name">NeuroZip · task-aware</div>
+        <div class="badge" id="us-badge">loading…</div>
+      </div>
+      <div class="gt-strip" id="gt-us">
+        <div style="width:54px;height:54px;background:#f1f1f4;border:2px solid var(--border);"></div>
+        <div class="gt-text"><strong>…</strong><span>ground-truth stimulus (what the subject saw)</span></div>
+      </div>
+      <div class="cards" id="cards-us"></div>
+      <div class="verdict" id="verdict-us">…</div>
+    </div>
+
+    <div class="pane them">
+      <div class="pane-head">
+        <div class="name">Fidelity baseline · MSE-only (same architecture, no task loss)</div>
+        <div class="badge" id="them-badge">loading…</div>
+      </div>
+      <div class="gt-strip" id="gt-them">
+        <div style="width:54px;height:54px;background:#f1f1f4;border:2px solid var(--border);"></div>
+        <div class="gt-text"><strong>…</strong><span>ground-truth stimulus (what the subject saw)</span></div>
+      </div>
+      <div class="cards" id="cards-them"></div>
+      <div class="verdict" id="verdict-them">…</div>
+    </div>
+  </div>
+
+  <!-- INTERPRETATION CARD -->
+  <div class="interp">
+    <div class="key">what you just saw</div>
+    <div class="body">
+      Same brain recording, same architecture, two losses. Fidelity
+      minimizes waveform MSE. NeuroZip adds a CLIP-cosine task term. At
+      aggressive compression they diverge: fidelity reconstructs noise
+      that happens to be low-MSE; NeuroZip reconstructs the meaning.
+      <span style="color:var(--muted);font-size:14px">(At this tier NeuroZip uses 46% more bits; bits match within 5% at higher tiers. Full iso-rate table in <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/results.md">results.md</a>, LAN-only.)</span>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 03 - validation: codec preserves what neuroscience predicts ============ -->
+  <section class="bio">
+    <div class="header">
+      <h2><span class="num">03</span>The codec preserves what neuroscience would predict</h2>
+      <div class="sub">
+        At 144× compression, NeuroZip's task loss preserves the
+        occipitotemporal electrodes and the visual-evoked ERP windows
+        tighter than fidelity does. That's exactly what 30 years of
+        visual-ERP literature would predict for an object-recognition
+        signal — read it as <b>validation</b> that the task gradient is
+        shaping the codec correctly, not as a discovery. (A supervised
+        CLIP-image loss preserving visual cortex would be the failure
+        case if it didn't.) All numbers below are at v4_low (144×) so
+        they match the headline ratio.
+      </div>
+    </div>
+    <div class="bio-stats">
+      <div class="stat">
+        <div class="k">N170 · 150–200 ms</div>
+        <div class="v">16.1<span class="small"> %</span></div>
+        <div class="desc">lower per-timepoint MSE than fidelity inside the face-and-object component window.</div>
+      </div>
+      <div class="stat">
+        <div class="k">P100 · 90–130 ms</div>
+        <div class="v">16.2<span class="small"> %</span></div>
+        <div class="desc">lower MSE in the early visual window.</div>
+      </div>
+      <div class="stat">
+        <div class="k">P300 · 280–400 ms</div>
+        <div class="v">10.7<span class="small"> %</span></div>
+        <div class="desc">lower MSE in the late evaluation window. P200 (200–260 ms) is at parity (−3.2%); not every ERP window favors NeuroZip at this tier.</div>
+      </div>
+    </div>
+    <div class="bio-fig">
+      <img src="/plots/phase1_erp_timeline.png" alt="per-timepoint reconstruction MSE with ERP windows" />
+      <div class="cap">
+        <b>When.</b> Red (NeuroZip) below gray (fidelity) inside the P100,
+        N170, and P300 windows; the two curves cross around P200.
+        Pre-stimulus (−200 to 0 ms) is at parity (no task signal there
+        to preserve).
+      </div>
+    </div>
+    <div class="bio-stats" style="margin-top:14px">
+      <div class="stat">
+        <div class="k">Visual cortex · 13 ch</div>
+        <div class="v">21.0<span class="small"> %</span></div>
+        <div class="desc">lower per-channel MSE than fidelity on the 13 occipital and parieto-occipital channels (O1 O2 Oz Iz PO7 PO8 PO3 PO4 POz P7 P8 P9 P10).</div>
+      </div>
+      <div class="stat">
+        <div class="k">Other channels · 50 ch</div>
+        <div class="v">5.0<span class="small"> %</span></div>
+        <div class="desc">lower MSE across the rest of the scalp. Much smaller advantage.</div>
+      </div>
+      <div class="stat">
+        <div class="k">Spatial preference</div>
+        <div class="v">4.16×</div>
+        <div class="desc"><b>p &lt; 0.001</b> (permutation test, K=10,000 random 13-channel sets). Only 3 of 10,000 random sets matched or beat the visual set's MSE-ratio gap — not chance. (See <code>plots/phase2_permutation.png</code>.)</div>
+      </div>
+    </div>
+    <div class="bio-fig" style="margin-top:14px">
+      <img src="/plots/phase1_topographic.png" alt="topographic head map of per-channel reconstruction error" />
+      <div class="cap">
+        <b>Where.</b> Three head maps, viewed from above. <b>Left:</b> fidelity's
+        per-channel error (big back-of-head blob = strong visual signal it fails to
+        preserve). <b>Center:</b> NeuroZip's error, same place, much smaller blob.
+        <b>Right:</b> the difference (red where NeuroZip wins) is concentrated
+        occipitally, as visual neuroscience would predict.
+      </div>
+    </div>
+    <div class="bio-fig" style="margin-top:14px">
+      <img src="/plots/phase2_permutation.png" alt="null distribution from 10,000 random channel-set permutations vs the observed visual-cortex spatial preference" />
+      <div class="cap">
+        <b>Why we believe the spatial number.</b> Gray histogram = the
+        4.16× spatial preference recomputed for 10,000 random 13-channel
+        sets sampled from all 63 electrodes. Red line = the observed
+        preference for the actual visual-cortex set. p = 0.0003 — almost
+        no random scalp partition matches what the task gradient does.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 04 - the engineering claim: per-bit retrieval edge ============ -->
+  <section class="bio">
+    <div class="header">
+      <h2><span class="num">04</span>144× compression. The per-bit retrieval edge is the load-bearing claim.</h2>
+      <div class="sub">
+        At every tier, NeuroZip retrieves more concepts per bit than the
+        fidelity baseline. That's the engineering claim: not "100% accuracy"
+        (the held-out classifier saturates near 100% for both methods above
+        144×), but "more retrievability per bit". An independent classifier
+        confirms the win generalizes beyond the projector the codec was
+        trained against — and the only tier where it doesn't saturate is
+        the same one we headline (v4_low, 144×): NeuroZip 100% vs fidelity
+        88%.
+      </div>
+    </div>
+    <div class="bio-stats">
+      <div class="stat">
+        <div class="k">Per-bit retrieval edge</div>
+        <div class="v">+10 pp</div>
+        <div class="desc">NeuroZip 29% vs fidelity 19% top-5 retrieval at the headline tier (200-way; chance = 2.5%; raw-EEG ceiling = 45%). +4–11 pp at every other tier (see <code>results.md</code>).</div>
+      </div>
+      <div class="stat">
+        <div class="k">Compression ratio</div>
+        <div class="v">144×</div>
+        <div class="desc">31,500 bytes raw fp16 → 219 bytes compressed. A 1 GB dataset becomes ~7 MB at this tier.</div>
+      </div>
+      <div class="stat">
+        <div class="k">Independent classifier</div>
+        <div class="v">100 / 88</div>
+        <div class="desc">NeuroZip 100% vs fidelity 88% on a separate EEG→concept classifier the codec was never trained against. <i>Caveat:</i> at every higher tier this judge saturates to 99–100% for both methods. It is a tie-breaker at 144×, not the headline.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 05 - the one-sentence "how" ============ -->
+  <section class="bio">
+    <div class="header">
+      <h2><span class="num">05</span>How it works · one sentence</h2>
+      <div class="sub">
+        We put a <b>frozen judge</b> in the loop that scores whether the
+        meaning survived, and train the compressor against it. The same
+        judge that decides what to keep is what reads your text query at
+        inference.
+      </div>
+    </div>
+    <div class="bio-fig">
+      <img src="/plots/architecture.png" alt="Task gradient flows from the cosine loss back through the frozen projector P into the decoder; the projector itself never updates." />
+      <div class="cap">
+        Trained modules in navy, frozen in hatched gray. Full derivation,
+        correctness conditions, and the v1→v4 evolution in
+        <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/ARCHITECTURE.md">ARCHITECTURE.md</a> (LAN-only).
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 07 - close ============ -->
+  <section class="bio">
+    <div class="header">
+      <h2><span class="num">07</span>Close</h2>
+      <div class="sub">
+        NeuroZip: brain datasets two orders of magnitude smaller, still
+        searchable by language. The per-bit retrieval edge is the
+        engineering claim. The validation: what the task loss preserves
+        tightest is exactly what visual neuroscience predicts — occipital
+        channels and the visual ERP windows, with a permutation p &lt; 0.001
+        on the spatial preference. We didn't discover the neurophysiology;
+        we confirmed the codec is keeping the right thing.
+      </div>
+    </div>
+    <div class="bio-fig">
+      <img src="/demo/assets/rate_retrieval.png" alt="rate-retrieval curve" />
+      <div class="cap">
+        The engineering payoff. x = bits per EEG sample (lower = more
+        compressed). y = top-5 retrieval. Red above gray at every bpp; gap
+        widens as compression gets aggressive. Full per-tier breakdown:
+        <a href="http://100.64.0.59:8081/root/neurozip/src/branch/criticism-2/results.md">results.md</a> (LAN-only).
+      </div>
+    </div>
+  </section>
+
+  <!-- DRILLDOWN -->
+  <div class="drilldown">
+    <div class="text">
+      Drill into the <b>live codec workspace</b> (compress / decompress your own EEG epochs) or the
+      <b>full technical demo</b> (reconstruction viewer, latent inspector, every codec at every tier)?
+    </div>
+    <div class="links">
+      <a href="/dc#workspace">Codec workspace</a>
+      <a href="/dc#demo">Technical demo</a>
+    </div>
+  </div>
+
+  <footer>
+    Data: THINGS-EEG (Gifford 2022; Wu CVPR 2025) · CLIP ViT-B-32 / laion2b · single subject (sub-01) ·
+    trial-averaged over 80 reps · v4 codec checkpoints (conv-only encoder, attention projector judge).<br>
+    Repository (internal Gitea, LAN-only): <a href="http://100.64.0.59:8081/root/neurozip">root/neurozip</a> · live inference via serve.py ·
+    bio analysis: <code>scripts/phase0_localization.py</code> + <code>scripts/phase1_bio_figures.py</code>
+  </footer>
+
+</div>
+
+<script>
+(async function() {
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // ---- bootstrap ----
+  const [models, conceptsResp] = await Promise.all([
+    fetch("/api/models").then(r => r.json()),
+    fetch("/api/concepts").then(r => r.json()),
+  ]);
+  const concepts = conceptsResp.concepts;
+
+  // Use the v4 checkpoints at the headline tier (low = biggest NeuroZip advantage).
+  function pickHeadlineModels() {
+    // Prefer v4 if available, else v3, etc.
+    for (const g of ["v4", "v3", "v2"]) {
+      const fid = `fidelity_${g}_low`;
+      const nzn = `neurozip_${g}_low`;
+      if (models[fid] && models[nzn]) return { fid, nzn };
+    }
+    // Last resort: any fidelity + neurozip
+    const fid = Object.keys(models).find(n => n.startsWith("fidelity"));
+    const nzn = Object.keys(models).find(n => n.startsWith("neurozip"));
+    return { fid, nzn };
+  }
+  const { fid: FID, nzn: NZN } = pickHeadlineModels();
+
+  // Static badges (these don't change per query)
+  document.getElementById("us-badge").textContent =
+    `${models[NZN].bpp.toFixed(3)} bpp · ${models[NZN].ratio.toFixed(0)}× compression`;
+  document.getElementById("them-badge").textContent =
+    `${models[FID].bpp.toFixed(3)} bpp · ${models[FID].ratio.toFixed(0)}× compression`;
+
+  // ---- featured concept chips ----
+  let featured = [];
+  try { featured = (await fetch("/demo/assets/summary.json").then(r => r.json())).featured || []; } catch {}
+  const chipBar = document.getElementById("featured");
+  for (const i of featured.slice(0, 6)) {
+    const c = concepts[i].replace(/_/g, " ");
+    const btn = document.createElement("button");
+    btn.className = "secondary";
+    btn.style.cssText = "padding:6px 12px;font-size:12px;background:#fff;color:var(--ink);border:1px solid var(--border);cursor:pointer;font-family:inherit;";
+    btn.textContent = c;
+    btn.addEventListener("click", () => {
+      document.getElementById("q").value = c;
+      run({text: c});
+    });
+    chipBar.appendChild(btn);
+  }
+
+  // ---- retrieval ----
+  async function run({text=null, concept_idx=null}) {
+    const body = text != null ? {text, models:[FID, NZN], k:5}
+                              : {concept_idx, models:[FID, NZN], k:5};
+    document.getElementById("qmeta").innerHTML = `<span class="spinner"></span> querying…`;
+    const r = await fetch("/api/retrieve", {method:"POST", headers:{"content-type":"application/json"},
+                                              body: JSON.stringify(body)}).then(r => r.json());
+    renderResult(r);
+  }
+
+  function renderResult(r) {
+    const goldIdx = r.query.nearest_concept_idx;
+    const goldName = cap(r.query.nearest_concept.replace(/_/g, " "));
+    const us = r.models[NZN], them = r.models[FID];
+    document.getElementById("qmeta").innerHTML =
+      `nearest test concept: <b>${goldName}</b>` +
+      (r.query.text ? ` (CLIP cos = ${r.query.nearest_concept_score.toFixed(3)})` : "") +
+      ` · gold rank: <b style="color:var(--accent)">${us.gold_rank+1}</b> (NeuroZip) vs ${them.gold_rank+1} (fidelity)`;
+    renderGT("gt-us", goldIdx);
+    renderGT("gt-them", goldIdx);
+    renderCards("cards-us", us.top_k_eeg_idx, goldIdx);
+    renderCards("cards-them", them.top_k_eeg_idx, goldIdx);
+
+    // Verdicts
+    const us_hit = us.top_k_eeg_idx.includes(goldIdx);
+    const them_hit = them.top_k_eeg_idx.includes(goldIdx);
+    document.getElementById("verdict-us").className = "verdict " + (us_hit ? "win" : "miss");
+    document.getElementById("verdict-them").className = "verdict " + (them_hit ? "win" : "miss");
+    document.getElementById("verdict-us").innerHTML = us_hit
+      ? `✓ NeuroZip retrieved the right concept at <b>rank ${us.gold_rank+1}</b> from compressed brain data.`
+      : `✗ NeuroZip's top-5 didn't include the right concept (gold rank ${us.gold_rank+1} of 200). This happens. Retrieval averages 29% top-5; not every query lands.`;
+    document.getElementById("verdict-them").innerHTML = them_hit
+      ? `✓ Fidelity also retrieved the right concept at <b>rank ${them.gold_rank+1}</b>.`
+      : `✗ Fidelity's top-5 didn't include the right concept (gold rank ${them.gold_rank+1} of 200). It spent its bits on raw waveform instead of meaning.`;
+  }
+
+  function renderGT(divId, idx) {
+    const concept = cap(concepts[idx].replace(/_/g, " "));
+    document.getElementById(divId).innerHTML =
+      `<img src="/api/concept_image/${idx}" onerror="this.style.opacity=.3" />` +
+      `<div class="gt-text"><strong>${concept}</strong><span>ground-truth stimulus (what the subject saw)</span></div>`;
+  }
+
+  function renderCards(gridId, idxs, gold) {
+    const grid = document.getElementById(gridId); grid.innerHTML = "";
+    idxs.forEach((idx, rank) => {
+      const isGold = idx === gold;
+      const div = document.createElement("div");
+      div.className = "card" + (isGold ? " gold" : "");
+      div.innerHTML = `
+        <img src="/api/concept_image/${idx}" onerror="this.style.opacity=.3" />
+        <span class="rank">#${rank+1}</span>
+        <span class="name">${cap(concepts[idx].replace(/_/g, " "))}</span>
+      `;
+      grid.appendChild(div);
+    });
+  }
+
+  // ---- listeners ----
+  document.getElementById("go").addEventListener("click", () => {
+    const t = document.getElementById("q").value.trim();
+    if (t) run({text: t});
+  });
+  document.getElementById("q").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("go").click();
+  });
+  document.getElementById("rand").addEventListener("click", () => {
+    // Uniform sample over all 200 test concepts: an actually-random control
+    // path that a self-driving judge can use to see the honest miss rate,
+    // not just the curated featured wins. ~71% of clicks here will not
+    // include the gold in top-5 (consistent with 29% top-5 average).
+    const i = Math.floor(Math.random() * concepts.length);
+    const c = cap(concepts[i].replace(/_/g, " "));
+    document.getElementById("q").value = c;
+    run({text: c});
+  });
+
+  // ---- hero EEG band: live render of a real test-set epoch ----
+  // Populate a switcher with up to 4 featured concepts (or fall back to a
+  // hardcoded short list) so the visitor can swap which brain recording is
+  // visible above the fold without leaving the page.
+  const heroPool = (featured.length ? featured.slice(0, 4) : [126, 150, 174, 7])
+    .filter(i => i != null && i >= 0 && i < concepts.length);
+  const heroSwitcher = document.getElementById("hero-eeg-switcher");
+  let currentHero = heroPool[0] ?? 0;
+  async function renderHero(idx) {
+    currentHero = idx;
+    document.getElementById("hero-eeg-concept").textContent = cap(concepts[idx].replace(/_/g, " "));
+    for (const b of heroSwitcher.querySelectorAll("button")) b.classList.toggle("active", +b.dataset.idx === idx);
+    const r = await fetch("/api/visualize_eeg", {method:"POST", headers:{"content-type":"application/json"},
+        body: JSON.stringify({epoch_idx: idx, title: "", theme: "light"})}).then(r => r.json());
+    document.getElementById("hero-eeg-img").src = r.fig;
+  }
+  for (const i of heroPool) {
+    const b = document.createElement("button");
+    b.dataset.idx = i;
+    b.textContent = cap(concepts[i].replace(/_/g, " "));
+    b.addEventListener("click", () => renderHero(i));
+    heroSwitcher.appendChild(b);
+  }
+  renderHero(currentHero);   // fire-and-forget; demo runs below in parallel
+
+  // ---- initial render ----
+  // Use the first featured concept (verified NeuroZip win on the loaded
+  // checkpoints) and exercise the full text-query path, so the qmeta line
+  // shows the CLIP-cos score a judge sees when they actually type a word.
+  const defaultIdx = featured.length ? featured[0] : 0;
+  const defaultText = cap(concepts[defaultIdx].replace(/_/g, " "));
+  document.getElementById("q").value = defaultText;
+  await run({text: defaultText});
+})().catch(e => {
+  document.body.insertAdjacentHTML("beforeend",
+    `<div style="position:fixed;bottom:0;left:0;right:0;background:#ffd6d6;color:#5a0000;padding:14px 24px;font:13px monospace;border-top:2px solid #b00;z-index:1000;">
+     pitch error: ${e.message || e}. ensure <code>serve.py</code> (or <code>./serve_pitch.sh</code>) is running and v4 checkpoints are loaded.</div>`);
+  console.error(e);
+});
+</script>
+</body>
+</html>

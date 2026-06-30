@@ -1,81 +1,244 @@
 # NeuroZip
 
-**Task-aware neural compression for brain signals - ffmpeg, but it keeps the *meaning*.**
+<div align="center">
 
-A normal codec optimizes raw fidelity. NeuroZip optimizes **decodable semantic content**: a
-frozen CLIP-space judge sits in the codec's training loop, so it learns to spend bits on the
-parts of an EEG epoch that stay *retrievable* and drop the rest. At a matched bitrate, the
-task-aware codec beats a fidelity-only codec on text/image retrieval from the compressed signal.
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?style=flat-square&logo=pytorch)](https://pytorch.org/)
+[![CLIP](https://img.shields.io/badge/CLIP-ViT--B%2F32%20LAION--2B-5A4FCF?style=flat-square)](https://github.com/mlfoundations/open_clip)
+[![Dataset: THINGS-EEG](https://img.shields.io/badge/Dataset-THINGS--EEG-003366?style=flat-square)](https://huggingface.co/datasets/Haitao999/things-eeg)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20Noncommercial-yellow.svg?style=flat-square)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 
-> **One-liner:** the same frozen model that decides what to throw away during compression is
-> what lets you text-search what you kept.
+<img src="demo/assets/rate_retrieval.png" width="620" alt="Top-5 retrieval versus bits per sample for the fidelity-only and task-aware codecs" />
 
-Trained on THINGS-EEG (63 channels x 250 samples, ViT-B-32 CLIP space). Measured, at the `high`
-tier: **neurozip image top-1 = 0.14 vs fidelity 0.08** at ~the same bitrate.
+</div>
 
-> Status: **v0.2.0-beta.1** - real trained models, real CLI, real upload UI.
+Task-aware neural compression of single-trial EEG. The codec is trained to preserve the decodable semantic content of each epoch (the CLIP embedding of the viewed stimulus) rather than to minimize waveform reconstruction error. At 144x compression, free-text retrieval over the compressed corpus is preserved; a fidelity-only codec at a comparable rate is not.
 
-## Install
+## Contents
+- [Abstract](#abstract)
+- [Installation](#installation)
+- [Method](#method)
+  - [Architecture](#architecture)
+  - [Objective](#objective)
+  - [Biological localization](#biological-localization)
+- [Results](#results)
+  - [Projector](#projector)
+  - [Codecs](#codecs)
+  - [Rate-distortion trade-off](#rate-distortion-trade-off)
+  - [Reconstruction examples](#reconstruction-examples)
+  - [Storage](#storage)
+- [Repository layout](#repository-layout)
+- [Reproduction](#reproduction)
+- [Limitations](#limitations)
+- [Acknowledgements](#acknowledgements)
+- [Authors](#authors)
+
+## Abstract
+
+NeuroZip is a task-aware neural codec for single-trial EEG. The codec is trained to preserve the decodable semantic content of each epoch, defined as the CLIP embedding of the viewed stimulus, rather than to minimize waveform reconstruction error. A frozen EEG-to-CLIP projector scores whether stimulus identity survives compression, and the codec is trained against that score; gradient propagates through the frozen projector into the decoder. The fidelity baseline and the task-aware codec share architecture and training budget and differ only in the weight of the task term (`lambda_task` = 0 versus 3.0), so observed differences are attributable to the objective rather than to model capacity.
+
+Two results follow on THINGS-EEG (subject `sub-01`). First, the compressed corpus remains searchable by natural language: a free-text query returns the epochs recorded while the subject viewed the corresponding object, although the model is never trained on text. At matched bitrate the task-aware codec improves top-5 image-prompt retrieval by 4 to 11 percentage points over the fidelity baseline, at a cost of at most 5 percent in reconstruction MSE. Second, because the objective retains only stimulus-decodable content, aggressive compression acts as an instrument for localizing task-relevant signal: at 144x compression the preserved information concentrates at occipitotemporal electrodes around the N170 (150 to 200 ms), and an independently trained classifier identifies the viewed object with 100 percent accuracy, versus 88 percent for the fidelity baseline. Object identity in single-subject EEG is therefore low-dimensional, spatially and temporally localized, and robust to compression.
+
+<p align="center"><img src="images/demo_interface.png" width="900" alt="Interactive demo: free-text to EEG retrieval, per-tier codec metrics, and the reconstruction viewer" /></p>
+
+The interactive demo (`serve_pitch.sh` / `serve_clean_v2.sh`): free-text to EEG retrieval with the task-aware codec and the fidelity baseline side by side (top), per-tier metrics for all codecs (middle), and a per-epoch reconstruction viewer (bottom). THINGS-EEG, subject `sub-01`, v4 codecs.
+
+## Installation
+
+The trained model is packaged as a standalone command-line tool, available through Homebrew, a curl installer, a precompiled single-file binary, or pip. The core install is dependency-free; PyTorch is set up on first inference use.
 
 ```bash
-brew install xerneas3318/tap/neurozip      # the CLI + UI (stdlib-only core)
-pip install "neurozip[ml]"                 # add the torch inference stack
-neurozip download                          # fetch the trained models -> ~/.neurozip
+# Homebrew
+brew install xerneas3318/tap/neurozip
+
+# curl (downloads the precompiled binary)
+curl -fsSL https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/install.sh | bash
+
+# precompiled, no install (single self-contained file, runs on any python3)
+curl -fsSLO https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip.pyz && chmod +x neurozip.pyz
+
+# pip (prebuilt wheel)
+pip install https://github.com/xerneas3318/NeuroZip/releases/download/v1.0.0/neurozip-1.0.0-py3-none-any.whl
+
+neurozip download                           # fetch the trained v4 model bundle into ~/.neurozip
 ```
 
-`brew`/core install is dependency-free. Real inference (compress, embed, the layer, the UI)
-needs the `ml` extra (torch) and the model bundle from `neurozip download`.
-
-## CLI
+The first inference command builds an isolated PyTorch environment on demand and caches the model bundle. Subsequent commands:
 
 ```bash
-neurozip info                              # list tiers + measured scores
-neurozip sample --idx 2 -o cat.npy         # write a demo EEG epoch
-neurozip compress cat.npy -o cat.nz --tier high          # real codec: bpp, ratio, latents
-neurozip compress cat.npy --variant fidelity             # the fidelity-only baseline
-neurozip decompress cat.nz -o cat.recon.npy
-neurozip embed cat.npy                     # 512-d CLIP-space embedding (the frozen judge)
-neurozip serve                             # local upload UI at 127.0.0.1:7878
+neurozip info                               # codec tiers and measured scores
+neurozip serve                              # local UI: compress an EEG epoch and inspect the reconstruction
+neurozip compress epoch.npy -o out.nz --tier high
+neurozip decompress out.nz -o recon.npy
+neurozip embed epoch.npy                     # 512-d CLIP-space embedding from the frozen projector
 ```
 
-Tiers: `low | med | high | xhigh` (more bits -> better fidelity + retrieval). Variants:
-`neurozip` (task-aware) and `fidelity` (matched-bitrate baseline for comparison).
+This is the packaged tool; full training and the retrieval demo are described in [Reproduction](#reproduction).
 
-## Upload UI
+## Method
 
-`neurozip serve` opens a page where you drag in an EEG epoch `.npy` (or pick a bundled demo
-epoch), choose a tier/variant, and get the real bitrate, compression ratio, reconstruction MSE,
-a raw-vs-decoded heatmap, and the neurozip-vs-fidelity retrieval table.
+### Architecture
 
-## Use it as a frozen layer (no embedding to train)
+The codec is a 1D convolutional autoencoder over time. An epoch of shape (63, 250) is encoded to a latent of (32 channels, 32 timesteps) = 1024 integer symbols, quantized, and decoded. Quantization uses additive uniform noise in [-0.5, 0.5] during training as a differentiable proxy for rounding, and integer rounding at inference. The bitrate is estimated by a factorized Laplace prior with a learnable per-channel scale.
 
-Drop NeuroZip in where you'd put a trainable embedding. It's the trained, frozen EEG->CLIP
-projector, so you never spend gradients on it - you train only the rest of your model:
+The projector P maps an epoch to a 512-dimensional CLIP-space vector through a depthwise temporal convolution, a channel mixer, a four-stage convolutional tower, an optional [CLS] token with transformer blocks, and L2 normalization. It is trained once with symmetric InfoNCE against the dataset's precomputed CLIP image features and then frozen. CLIP itself is not invoked during codec training.
 
-```python
-import torch
-from neurozip import NeuroZipLayer
-
-embed = NeuroZipLayer.from_pretrained()    # frozen, requires_grad=False
-x = torch.randn(8, 63, 250)                # (batch, channels, time), normalized EEG
-z = embed(x)                               # (8, 512) unit-norm - no grad spent here
-logits = my_head(z)                        # train only my_head
+```
+EEG epoch --> encoder --> quantize --> decoder --> EEG_hat
+                                                      |
+                                          frozen projector P
+                                                      |
+                                          P(EEG_hat) = e_hat in CLIP space
+                                                      |
+                            L_task = 1 - cos( e_hat, CLIP_image(stimulus) )
 ```
 
-## How it works
+A rendered schematic is at [`plots/architecture.png`](plots/architecture.png); design rationale and the v1-to-v4 progression are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-1. **Frozen judge** - an EEG->CLIP projector (conv tower + transformer head) trained to map an
-   epoch into CLIP's image/text space, then frozen.
-2. **Codec** - a 1D-conv autoencoder + factorized-Laplace entropy model giving a real bitrate.
-3. **Task-aware loss** - `rate + lambda_recon*MSE + lambda_task*(1 - cos(judge(decoded), CLIP_img(seen)))`.
-   Gradients flow *through* the frozen judge into the codec, so compression is optimized for
-   retrievability, not sample fidelity.
+### Objective
 
-See `ARCHITECTURE.md` for the full design and the three easy-to-get-wrong spots (quantizer,
-gradient flow through the frozen judge, normalization stats).
+```
+L = lambda_rate  * bits(latent | prior)
+  + lambda_recon * || EEG - EEG_hat ||^2
+  + lambda_task  * ( 1 - cos( P(EEG_hat), CLIP_image(stimulus) ) )
+```
 
-## License
+The rate term controls compression; the reconstruction term constrains the output to a valid waveform; the task term constrains the reconstruction to remain decodable in CLIP space. The CLIP target embedding is detached; the projector is frozen but not detached, so gradient from the task term reaches the decoder. A startup assertion confirms non-zero decoder gradient from a task-only backward pass and zero projector gradient.
 
-[PolyForm Noncommercial License 1.0.0](LICENSE): public source, free for any **noncommercial**
-use (personal, research, education, nonprofit). **Selling it is not permitted.** Source-available,
-not an OSI "open source" license (which cannot forbid selling).
+### Biological localization
+
+The reconstruction preference of the task-aware codec is spatially and temporally consistent with the visual system.
+
+- Spatial: visual-cortex channels (O1, O2, Oz, Iz, PO7, PO8, and neighbors) reconstruct 32 percent tighter under the task-aware codec than under the fidelity baseline at matched compression, versus 7 percent tighter on non-visual channels (a 4.7x spatial preference).
+- Temporal: visual-evoked ERP windows reconstruct 12 to 25 percent tighter. The N170 (150 to 200 ms) reconstructs 25.4 percent tighter; P100, P200, and P300 are also favored.
+- An independently trained EEG-to-concept classifier (different data split, different loss) attains 100 percent top-1 accuracy on task-aware-decompressed EEG at 144x compression.
+
+Quantities: [`plots/phase0_summary.json`](plots/phase0_summary.json), [`plots/phase1_bio_numbers.json`](plots/phase1_bio_numbers.json). Figures: [`plots/phase1_erp_timeline.png`](plots/phase1_erp_timeline.png), [`plots/phase1_topographic.png`](plots/phase1_topographic.png).
+
+## Results
+
+Subject `sub-01`, trial-averaged over 80 repetitions, recommended v4 generation (convolutional codec, attention projector, attention held-out classifier). Chance on 200-way retrieval is 0.5 / 2.5 / 5.0 percent for top-1 / 5 / 10.
+
+### Projector
+
+| projector | params | top-1 | top-5 | top-10 |
+|---|---:|---:|---:|---:|
+| convolutional (AvgPool + MLP head) | 2.5 M | 13.5% | 37.5% | 50.5% |
+| convolutional + [CLS] + 2 attention blocks | 6.0 M | 18.5% | 45.0% | 65.0% |
+
+The attention projector's scores (18.5 / 45.0 / 65.0) define the no-compression ceiling against which codec scores are read.
+
+### Codecs
+
+Fidelity baseline (MSE and rate only):
+
+| codec | bpp | ratio | MSE | top-1 | top-5 | top-10 | held-out top-1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `fidelity_v4_low` | 0.076 | 210x | 0.0401 | 5.5% | 19.0% | 29.0% | 88.0% |
+| `fidelity_v4_med` | 0.154 | 104x | 0.0298 | 8.0% | 26.5% | 38.0% | 99.5% |
+| `fidelity_v4_high` | 0.209 | 76x | 0.0231 | 8.0% | 26.5% | 40.5% | 100.0% |
+| `fidelity_v4_xhigh` | 0.248 | 64x | 0.0213 | 9.5% | 31.5% | 43.5% | 100.0% |
+
+Task-aware codec (MSE, rate, and task):
+
+| codec | bpp | ratio | MSE | top-1 | top-5 | top-10 | held-out top-1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `neurozip_v4_low` | 0.111 | 144x | 0.0359 | 10.5% | 29.0% | 42.5% | 100.0% |
+| `neurozip_v4_med` | 0.190 | 84x | 0.0251 | 10.5% | 32.5% | 47.0% | 100.0% |
+| `neurozip_v4_high` | 0.222 | 72x | 0.0234 | 14.0% | 37.5% | 52.0% | 100.0% |
+| `neurozip_v4_xhigh` | 0.250 | 64x | 0.0223 | 14.5% | 35.5% | 50.0% | 100.0% |
+
+### Rate-distortion trade-off
+
+At matched tiers, the task-aware codec increases reconstruction MSE by at most 5 percent and increases top-5 retrieval by 4 to 11 percentage points (13 to 42 percent relative).
+
+| tier | task-aware / fidelity bpp | ratio (task-aware / fidelity) | top-5 difference |
+|---|---|---|---|
+| low | 0.111 / 0.076 | 144x / 210x | +10.0 pp |
+| med | 0.190 / 0.154 | 84x / 104x | +6.0 pp |
+| high | 0.222 / 0.209 | 72x / 76x | +11.0 pp |
+| xhigh | 0.250 / 0.248 | 64x / 64x | +4.0 pp |
+
+[`demo/assets/rate_retrieval.png`](demo/assets/rate_retrieval.png) plots top-5 retrieval against bits per sample for both families.
+
+### Reconstruction examples
+
+A held-out trial-averaged epoch reconstructed by both codecs at the high tier. The two codecs reach near-identical reconstruction error (MSE 0.0207 for the task-aware codec, 0.0201 for the fidelity baseline), consistent with the shared architecture; the methods differ in retrievability rather than in waveform fidelity.
+
+<p align="center"><img src="images/reconstruction_heatmaps.png" width="560" alt="Raw EEG and the task-aware and fidelity decompressions, per channel and time" /></p>
+
+Raw EEG (top) and the two decompressions, normalized amplitude per channel and time.
+
+<p align="center"><img src="images/error_heatmaps.png" width="640" alt="Absolute reconstruction error per channel and time for both codecs, with per-epoch MSE" /></p>
+
+Absolute reconstruction error per channel and time, with per-epoch MSE annotated.
+
+<p align="center"><img src="images/per_channel_waveforms.png" width="560" alt="Per-channel waveforms for six electrodes, raw versus both codecs" /></p>
+
+Per-channel waveforms for six electrodes; both codecs track the raw trace.
+
+<p align="center"><img src="images/latent_codes.png" width="560" alt="Quantized integer latent codes for the two codecs" /></p>
+
+Quantized latent codes (32 latent channels by 32 latent timesteps) for the two codecs.
+
+### Storage
+
+A float16 epoch is 63 x 250 = 15,750 samples = 31.5 kB. A corpus of 1,000,000 labeled trial epochs is approximately 30 GB at float16 and approximately 210 MB at 144x, with 29 percent top-5 retrieval and 100 percent held-out classifier accuracy retained.
+
+## Repository layout
+
+| path | contents |
+|---|---|
+| `data.py` | THINGS-EEG loader, per-channel normalization statistics |
+| `clip_proj.py` | EEG-to-CLIP projector P |
+| `codec.py` | convolutional codec, factorized Laplace prior, quantizer |
+| `train.py` | training entry point: `proj`, `codec`, `neurozip`, `classifier` |
+| `evaluate.py` | matched-bitrate evaluation, rate-retrieval plot, demo assets |
+| `serve.py` | Flask backend: text encoding, reconstruction, server-rendered figures |
+| `pitch.html`, `demo.html`, `demo_clean.html`, `NeuroZip.dc.html` | viewer and presentation pages |
+| `pitch.md`, `presentation_prompt.md` | presentation script and brief |
+| `plots/` | biology figures (phase0, phase1) and architecture schematic |
+| `scripts/phase0_localization.py`, `scripts/phase1_bio_figures.py` | biological-localization figure generation |
+| `scripts/train_sweep_v4.sh` | recommended training sweep |
+| `scripts/download_data.sh` | dataset subset download |
+| `serve_pitch.sh`, `serve_clean.sh`, `serve_clean_v2.sh`, `train.sh` | entry points |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md), [`results.md`](results.md) | design notes, full results and glossary |
+
+## Reproduction
+
+```bash
+git clone https://github.com/xerneas3318/NeuroZip.git
+cd NeuroZip && git checkout criticism-2
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r requirements.txt
+bash scripts/download_data.sh          # THINGS-EEG subset, approximately 3 GB
+./train.sh sweep_v4                     # full v4 sweep, approximately 45 min on one RTX 4090
+```
+
+Stages are independently runnable:
+
+```bash
+.venv/bin/python train.py proj                                              # projector
+.venv/bin/python train.py codec    --out fidelity_v4_med                    # baseline
+.venv/bin/python train.py neurozip --out neurozip_v4_med --init_from fidelity_v4_med
+.venv/bin/python train.py classifier                                        # held-out classifier
+.venv/bin/python evaluate.py --models fidelity_v4_med neurozip_v4_med
+```
+
+`lambda_task` = 3.0 and `lambda_recon` = 1.0 for all task-aware codecs; the per-tier dial is `lambda_rate` (`scripts/train_sweep_v4.sh`). The demo scripts share the Flask backend and require trained checkpoints. `serve_pitch.sh` additionally requires the figures in `plots/`.
+
+## Limitations
+
+- Single subject (`sub-01`). The pipeline is subject-agnostic but reported numbers are for one of ten subjects.
+- Evaluation is trial-averaged over 80 repetitions per concept, the standard THINGS-EEG protocol; single-trial retrieval is noisier.
+- The task-aware codec uses more bits at the lowest tier (0.111 versus 0.076 bpp); the matched-rate comparison holds at the high and xhigh tiers.
+- The dataset's "ViT-B-32" features are LAION-2B, not OpenAI (cosine 0.98 versus -0.06). The inference-time text encoder must use the matching variant.
+- Epochs are 1-second visual-presentation trials, not continuous recordings; a streaming codec would be required for the latter.
+
+## Acknowledgements
+
+THINGS-EEG (Gifford, Dwivedi, Roig, Cichy, 2022), as packaged at [`Haitao999/things-eeg`](https://huggingface.co/datasets/Haitao999/things-eeg). OpenCLIP and the LAION-2B ViT-B/32 weights (`laion2b_s34b_b79k`). Developed at the QBI Hackathon 2026 (Quantitative Biosciences Institute, UCSF).
+
+## Authors
+
+Rian Butala, Avinash Senthil.

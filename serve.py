@@ -294,6 +294,60 @@ def fig_latent_grid(epoch_idx: int, model_names: list[str]) -> str:
     return fig_to_b64(fig)
 
 
+def fig_eeg_single(eeg: np.ndarray, title: str = "EEG epoch", color="#161a22",
+                    theme: str = "dark") -> str:
+    """Compact single-EEG figure: heatmap on top, 4 channel waveforms below.
+
+    Used by the codec workspace to preview the loaded file, the codec's
+    reconstruction, and the decompressed output. Same renderer for all three.
+    `theme="light"` swaps to a white background (used by the pitch hero).
+    """
+    light = (theme == "light")
+    bg       = "#ffffff" if light else "#161922"
+    fg_title = "#0e0e10" if light else "#e6e8ee"
+    fg_label = "#3a3a44" if light else "#bfc4d2"
+    fg_tick  = "#3a3a44" if light else "#d0d2d8"
+    spine    = "#cccccc" if light else "#444a5e"
+    axbg     = "#fafafa" if light else "#0f1115"
+    line_pal = (["#0e0e10", "#d62728", "#1f9d55", "#d97706"] if light
+                else ["#e6e8ee", "#d62728", "#4caf50", "#ff9f43"])
+    legend_bg = "#ffffff" if light else "#0f1115"
+
+    def _style(ax):
+        ax.set_facecolor(axbg)
+        for s in ax.spines.values(): s.set_color(spine)
+        ax.tick_params(colors=fg_tick, labelsize=8)
+        ax.title.set_color(fg_title)
+        ax.xaxis.label.set_color(fg_label); ax.yaxis.label.set_color(fg_label)
+
+    fig = plt.figure(figsize=(8.2, 4.0))
+    gs = fig.add_gridspec(2, 1, height_ratios=[2.4, 1.0], hspace=0.42)
+    ax_h = fig.add_subplot(gs[0])
+    ax_w = fig.add_subplot(gs[1], sharex=None)
+
+    vmax = float(np.abs(eeg).max()) if eeg.size else 1.0
+    im = ax_h.imshow(eeg, aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax,
+                     extent=[-200, 996, 63, 0])
+    ax_h.set_title(title, fontsize=10, loc="left", color=fg_title, pad=4)
+    ax_h.set_ylabel("channel")
+    _style(ax_h)
+
+    t_ms = np.linspace(-200, 996, eeg.shape[1])
+    for ch, c in zip([10, 25, 40, 55], line_pal):
+        ax_w.plot(t_ms, eeg[ch], lw=1.0, color=c, label=f"ch {ch}")
+    ax_w.axvline(0, color=spine, lw=0.7)
+    ax_w.set_xlabel("time after stimulus (ms)")
+    ax_w.legend(loc="upper right", fontsize=8, framealpha=0.6,
+                facecolor=legend_bg, edgecolor=spine, labelcolor=fg_label, ncol=4)
+    _style(ax_w)
+
+    cb = fig.colorbar(im, ax=[ax_h], shrink=0.7, pad=0.02, label="σ (norm)")
+    cb.ax.tick_params(colors=fg_tick)
+    cb.set_label("σ (norm)", color=fg_label)
+    fig.patch.set_facecolor(bg)
+    return fig_to_b64(fig)
+
+
 @torch.no_grad()
 def fig_per_channel_mse(model_names: list[str]) -> str:
     """MSE per channel averaged across the test set."""
@@ -353,9 +407,15 @@ def _ensure_state():
 
 
 def _root_html() -> str:
-    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean."""
+    """Which HTML file `/` serves. Override via env NEUROZIP_HOME=clean|dc|pitch|dark."""
     home = os.environ.get("NEUROZIP_HOME", "dark").lower()
-    return "demo_clean.html" if home == "clean" else "demo.html"
+    return {
+        "clean": "demo_clean.html",
+        "dc":    "NeuroZip.dc.html",
+        "v2":    "NeuroZip.dc.html",
+        "pitch": "pitch.html",
+        "dark":  "demo.html",
+    }.get(home, "demo.html")
 
 
 @app.get("/")
@@ -367,6 +427,25 @@ def index():
 def index_clean():
     """White-theme alternative to demo.html — same API, different shell."""
     return send_file(ROOT / "demo_clean.html")
+
+
+@app.get("/dc")
+def index_dc():
+    """v2 design: ported NeuroZip.dc.html with codec workspace."""
+    return send_file(ROOT / "NeuroZip.dc.html")
+
+
+@app.get("/pitch")
+def index_pitch():
+    """Hero pitch page — single-page 'type a word → see the brain recording'
+    with the biology figures below. Bio-hackathon framing."""
+    return send_file(ROOT / "pitch.html")
+
+
+@app.get("/plots/<path:p>")
+def plots(p):
+    """Serve plots/phase{0,1}_*.png so the pitch page can <img> them."""
+    return send_from_directory(ROOT / "plots", p)
 
 
 @app.get("/dark")
@@ -406,6 +485,45 @@ def models():
             "holdout_top1": s.get("holdout_top1"),
         }
     return jsonify(out)
+
+
+@app.get("/api/baseline")
+def baseline():
+    """Reference numbers for contextualizing the codecs' retrieval scores.
+
+    - chance: random retrieval (k/200)
+    - raw_eeg: top-k from the frozen projector on uncompressed trial-averaged EEG.
+              This is OUR ceiling — no codec can do better than this on the
+              same retrieval metric, since every codec's output is decoded
+              through the same projector.
+    - sota: best published top-5 on this exact protocol (THINGS-EEG, 200-way,
+            trial-averaged), as a reference for what a bigger judge / longer
+            training / multi-subject would buy.
+    """
+    scores_path = CHECKPOINTS / "scores.json"
+    scores = json.loads(scores_path.read_text()) if scores_path.exists() else {}
+    raw = {}
+    if scores:
+        # Every codec records the same retrieval_raw_image (same projector + EEG).
+        any_codec = next(iter(scores.values()))
+        raw = any_codec.get("retrieval_raw_image", {})
+    return jsonify({
+        "chance":  {"top1": 1/200, "top5": 5/200, "top10": 10/200},
+        "raw_eeg": {
+            "top1":  raw.get("top1"),
+            "top5":  raw.get("top5"),
+            "top10": raw.get("top10"),
+            "label": "frozen projector P on uncompressed trial-averaged EEG (our ceiling)",
+        },
+        "sota": {
+            "top1":  0.34,
+            "top5":  0.65,
+            "top10": 0.79,
+            "label": "approx. SOTA on THINGS-EEG 200-way trial-averaged (NICE / Wu et al. CVPR 2025; multi-subject, ~10-30M-param projector, 100+ epochs)",
+        },
+        "n_concepts": 200,
+        "raw_fp16_bpp": 16.0,
+    })
 
 
 @app.get("/api/concepts")
@@ -495,6 +613,225 @@ def reconstruct_endpoint():
                               "mse": mse,
                               "compression_ratio_vs_fp16": 16.0 / max(c.bpp_floor(bits), 1e-6)}
     return jsonify({"info": info, "figs": figs})
+
+
+# ============================================================================
+# Codec workspace endpoints (NeuroZip.dc.html "Compress / Decompress" panes)
+# ============================================================================
+
+def _serialize_compressed(model_name: str, latent_int: np.ndarray) -> bytes:
+    """Tiny custom-format .nz file: a single .npz containing the integer
+    latent, the model name, and the per-channel norm stats (so the
+    decompressor doesn't need an out-of-band lookup)."""
+    bio = io.BytesIO()
+    np.savez_compressed(
+        bio,
+        model=np.array(model_name, dtype=str),
+        latent=latent_int.astype(np.int16),
+        norm_mean=State.norm_mean.numpy().astype(np.float32),
+        norm_std=State.norm_std.numpy().astype(np.float32),
+    )
+    return bio.getvalue()
+
+
+def _deserialize_compressed(blob: bytes) -> dict:
+    with np.load(io.BytesIO(blob), allow_pickle=False) as z:
+        return {
+            "model": str(z["model"]),
+            "latent": z["latent"].astype(np.int32),
+            "norm_mean": z["norm_mean"].astype(np.float32),
+            "norm_std": z["norm_std"].astype(np.float32),
+        }
+
+
+def _decode_input_eeg(body: dict) -> tuple[np.ndarray, str]:
+    """Frontend gives us EITHER an epoch_idx (use the loaded test set) OR
+    a base64-encoded raw payload — try .npy first, fall back to raw float
+    bytes. Returns (eeg_array_63x250_float32, source_label)."""
+    if body.get("epoch_idx") is not None:
+        idx = int(body["epoch_idx"])
+        # Inverse-normalize back to "real" EEG units so the workspace
+        # mirrors what an external caller would actually feed in.
+        x = State.eeg_avg[idx].numpy()
+        x_real = x * State.norm_std.numpy()[:, None] + State.norm_mean.numpy()[:, None]
+        return x_real.astype(np.float32), f"test epoch #{idx}"
+    blob = base64.b64decode(body["bytes_b64"])
+    # Try parsing as .npy (the standard EEG epoch format).
+    try:
+        arr = np.load(io.BytesIO(blob), allow_pickle=False)
+    except Exception:
+        # Fall back to a raw float32 buffer
+        arr = np.frombuffer(blob, dtype=np.float32)
+    arr = arr.reshape(N_CHANNELS, N_TIMES).astype(np.float32)
+    return arr, "uploaded file"
+
+
+@app.post("/api/compress")
+def api_compress():
+    """Compress an EEG epoch through one of the trained codecs.
+
+    Request: {"epoch_idx": int}  OR  {"bytes_b64": <base64 of .npy or raw>,
+                                      "model": "neurozip_v4_high"}
+    Returns: codec stats + base64-encoded .nz blob for download.
+    """
+    body = request.get_json(force=True)
+    eeg, source = _decode_input_eeg(body)
+    model_name = body.get("model", "neurozip_v4_high")
+    if model_name not in State.codecs:
+        return jsonify(error=f"unknown model {model_name}"), 400
+
+    # Normalize → encode → quantize → bits → roundtrip MSE.
+    eeg_n = (eeg - State.norm_mean.numpy()[:, None]) / State.norm_std.numpy()[:, None]
+    x = torch.from_numpy(eeg_n).unsqueeze(0).to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        y = codec.encoder(x)
+        y_int = torch.round(y)
+        bits = codec.prior.bits(y_int).item()
+        xh_n = codec.decoder(y_int).cpu().squeeze(0).numpy()
+    mse_norm = float(((eeg_n - xh_n) ** 2).mean())
+
+    latent = y_int.cpu().squeeze(0).int().numpy()
+    blob = _serialize_compressed(model_name, latent)
+    bpp = codec.bpp_floor(bits)
+
+    return jsonify({
+        "filename": f"epoch.{model_name}.nz",
+        "size_bytes": len(blob),
+        "raw_fp16_bytes": N_CHANNELS * N_TIMES * 2,
+        "bpp": bpp,
+        "bits_per_symbol": bits,
+        "ratio": 16.0 / max(bpp, 1e-9),
+        "mse": mse_norm,
+        "latent_shape": list(latent.shape),
+        "latent_unique_values": int(np.unique(latent).size),
+        "source": source,
+        "bytes_b64": base64.b64encode(blob).decode(),
+        # Visual previews for the workspace UI.
+        "input_fig": fig_eeg_single(eeg_n, f"input EEG  ·  {source}"),
+        "recon_fig": fig_eeg_single(xh_n, f"reconstructed  ·  {model_name}  ·  MSE {mse_norm:.4f}"),
+    })
+
+
+@app.post("/api/decompress")
+def api_decompress():
+    """Decompress a .nz blob back into a 63x250 EEG epoch.
+
+    Request: {"bytes_b64": <base64 of .nz file>}
+    Returns: shape + reconstructed EEG as .npy bytes (base64) for download.
+    """
+    body = request.get_json(force=True)
+    blob = base64.b64decode(body["bytes_b64"])
+    payload = _deserialize_compressed(blob)
+    model_name = payload["model"]
+    if model_name not in State.codecs:
+        return jsonify(error=f"compressed blob asks for model '{model_name}' which isn't loaded"), 400
+
+    y = torch.from_numpy(payload["latent"]).float().unsqueeze(0).to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        xh_n = codec.decoder(y).cpu().squeeze(0).numpy()
+    # Inverse-normalize back to real EEG units.
+    xh = xh_n * payload["norm_std"][:, None] + payload["norm_mean"][:, None]
+
+    bio = io.BytesIO()
+    np.save(bio, xh.astype(np.float16), allow_pickle=False)
+    npy_bytes = bio.getvalue()
+
+    return jsonify({
+        "filename": f"epoch.recon.npy",
+        "size_bytes": len(npy_bytes),
+        "shape": list(xh.shape),
+        "model": model_name,
+        "bytes_b64": base64.b64encode(npy_bytes).decode(),
+        "fig": fig_eeg_single(xh_n, f"decoded  ·  {model_name}"),
+    })
+
+
+@app.post("/api/visualize_eeg")
+def api_visualize_eeg():
+    """Render a single EEG epoch as a figure. Used by the workspace to preview
+    a file BEFORE the user clicks Compress. Accepts either:
+      {"epoch_idx": int}  → use the loaded trial-averaged test EEG
+      {"bytes_b64": ...}  → decode as a .npy file (or raw float32 buffer)
+    Returns: {"fig": <base64 png>}."""
+    body = request.get_json(force=True)
+    title = body.get("title", "EEG epoch")
+    theme = body.get("theme", "dark")
+    if body.get("epoch_idx") is not None:
+        # State.eeg_avg is already z-normalized — render directly.
+        eeg_n = State.eeg_avg[int(body["epoch_idx"])].numpy()
+    else:
+        eeg_real, _ = _decode_input_eeg({"bytes_b64": body["bytes_b64"]})
+        eeg_n = (eeg_real - State.norm_mean.numpy()[:, None]) / State.norm_std.numpy()[:, None]
+    return jsonify({"fig": fig_eeg_single(eeg_n, title, theme=theme)})
+
+
+@app.get("/api/demo_epoch/<int:idx>")
+def api_demo_epoch(idx):
+    """Stream a real EEG epoch from the test set as a .npy file. Lets the
+    workspace's 'demo epoch' dropdown actually feed a real array to /api/compress."""
+    if not (0 <= idx < State.eeg_avg.size(0)):
+        return abort(404)
+    x = State.eeg_avg[idx].numpy()
+    x_real = x * State.norm_std.numpy()[:, None] + State.norm_mean.numpy()[:, None]
+    bio = io.BytesIO()
+    np.save(bio, x_real.astype(np.float16), allow_pickle=False)
+    bio.seek(0)
+    concept = State.concept_list[idx]
+    return send_file(bio, mimetype="application/octet-stream",
+                     as_attachment=True, download_name=f"{concept}_idx{idx}.npy")
+
+
+@app.get("/api/demo_compressed/<int:idx>")
+def api_demo_compressed(idx):
+    """Stream a real EEG epoch already compressed through the requested codec
+    as a .nz file. The decompress pane's example-file dropdown uses this so
+    users can roundtrip without first running compress."""
+    if not (0 <= idx < State.eeg_avg.size(0)):
+        return abort(404)
+    model_name = request.args.get("model", "neurozip_v4_high")
+    if model_name not in State.codecs:
+        return abort(404)
+    x = State.eeg_avg[idx:idx+1].to(DEVICE)
+    codec = State.codecs[model_name]
+    with torch.no_grad():
+        y = codec.encoder(x)
+        y_int = torch.round(y).cpu().squeeze(0).int().numpy()
+    blob = _serialize_compressed(model_name, y_int)
+    concept = State.concept_list[idx]
+    return send_file(io.BytesIO(blob), mimetype="application/octet-stream",
+                     as_attachment=True, download_name=f"{concept}_idx{idx}.{model_name}.nz")
+
+
+# Curated set of example test-set concepts: visually distinct, well-known names
+# that actually appear in THINGS-EEG's 200-concept test split. Shown as
+# "Load example..." options in the workspace, also downloadable as .npy / .nz
+# so people can save and re-upload them through the workspace.
+EXAMPLE_CONCEPTS = [
+    # animals
+    "cat", "dalmatian", "flamingo", "ostrich", "cheetah", "manatee",
+    # objects
+    "robot", "unicycle", "submarine", "drum", "basketball", "ferry",
+    "bench", "wheelchair",
+    # food
+    "banana", "bread", "egg",
+]
+
+
+@app.get("/api/examples")
+def api_examples():
+    """Return the curated set of demo concepts that DO exist in the test split,
+    with their epoch indices so the frontend can fetch the right .npy / .nz."""
+    out = []
+    for c in EXAMPLE_CONCEPTS:
+        try:
+            idx = State.concept_list.index(c)
+        except ValueError:
+            continue
+        out.append({"concept": c, "idx": idx})
+    return jsonify({"examples": out,
+                    "default_model": "neurozip_v4_high" if "neurozip_v4_high" in State.codecs else next(iter(State.codecs))})
 
 
 @app.post("/api/aggregate_figs")

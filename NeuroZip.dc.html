@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroZip</title>
+<!-- Web fonts removed: gov look uses system Arial / Verdana / Courier New. -->
+<style>
+  html, body { margin: 0; background: #eef0f4; }
+  * { box-sizing: border-box; }
+  body { color: #161a22; font-family: 'IBM Plex Sans', system-ui, sans-serif; line-height: 1.45; -webkit-font-smoothing: antialiased; padding: 0; }
+
+  /* ---- Obsidian-style left sidebar ---- */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 232px; flex-shrink: 0; height: 100vh;
+    background: #e6e9f0; border-right: 1px solid #d4d9e3;
+    padding: 18px 14px; display: flex; flex-direction: column; gap: 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .sidebar .vault-title {
+    font-size: 14px; font-weight: 600; color: #161a22;
+    padding: 4px 10px; letter-spacing: -0.01em;
+  }
+  .sidebar .vault-title span { color: #b23b34; }
+  .sidebar .vault-sub {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: #6b7280; padding: 0 10px; letter-spacing: .05em;
+  }
+  .sidebar .section-label {
+    font-size: 9.5px; color: #8b92a4; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .1em;
+    padding: 4px 10px; margin-top: 6px;
+  }
+  .sidebar .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    color: #4b5263; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; background: transparent;
+    text-align: left; width: 100%; font-family: inherit;
+    transition: background .12s ease, color .12s ease;
+  }
+  .sidebar .nav-item:hover { background: #d8dde7; color: #161a22; }
+  .sidebar .nav-item.active { background: #161a22; color: #fff; }
+  .sidebar .nav-item .ico { flex-shrink: 0; opacity: .9; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
+  .sidebar .nav-item .meta { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; opacity: .55; }
+  .sidebar { overflow-y: auto; }
+  .sidebar .sb-kpi {
+    padding: 9px 12px;
+    border-bottom: 1px solid #d4d9e3;
+  }
+  .sidebar .sb-kpi:last-of-type { border-bottom: none; }
+  .sidebar .sb-kpi .k {
+    font-size: 9.5px; color: #8b92a4; font-weight: 600;
+    letter-spacing: .09em; text-transform: uppercase;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .sidebar .sb-kpi .v {
+    font-size: 19px; font-weight: 500; color: #161a22;
+    margin-top: 4px; font-family: 'IBM Plex Mono', monospace;
+    line-height: 1; letter-spacing: -0.01em;
+  }
+  .sidebar .sb-kpi .sub {
+    font-size: 10px; color: #8b92a4; margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: .02em;
+  }
+  .sidebar .vault-foot {
+    margin-top: auto; padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: #8b92a4; line-height: 1.5;
+  }
+  .sidebar .vault-foot a { color: #6b7280; text-decoration: none; }
+  .sidebar .vault-foot a:hover { color: #161a22; }
+  main.content {
+    flex: 1; min-width: 0;
+    padding: 20px 28px 28px; display: flex; flex-direction: column; gap: 14px;
+  }
+
+  /* ---- Sterile KPI strip ---- */
+  .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); background: #fff; border: 1px solid #e3e6ee; border-radius: 10px; box-shadow: 0 1px 2px rgba(20,24,34,.04); overflow: hidden; }
+  .kpi-cell { padding: 14px 16px; border-right: 1px solid #eceff5; }
+  .kpi-cell:last-child { border-right: none; }
+  .kpi-cell .k { font-size: 10px; color: #8b92a4; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-family: 'IBM Plex Sans', sans-serif; }
+  .kpi-cell .v { font-size: 22px; font-weight: 500; color: #161a22; letter-spacing: -0.01em; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; line-height: 1; }
+  .kpi-cell .sub { font-size: 10.5px; color: #8b92a4; margin-top: 5px; font-family: 'IBM Plex Mono', monospace; letter-spacing: .02em; }
+  /* shared interactive states */
+  button:disabled { cursor: not-allowed; }
+  input[type=range] { accent-color: #b23b34; }
+  select, input[type=text] { font: inherit; }
+  /* tiny "card" gold/selected highlights for retrieved epoch thumbnails */
+  .card-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ring-gold { border: 2px solid #1f9d55 !important; }
+  .ring-selected { border: 2px solid #d97706 !important; }
+  .ring-default { border: 1px solid #e7ebf2; }
+  /* table row hover */
+  tr.codec-row { transition: background .15s; }
+  tr.codec-row:hover { background: #f7f9fc !important; }
+  /* hidden file inputs */
+  .file-input { display: none; }
+  /* fig images */
+  .fig-img { width:100%; height:220px; object-fit:contain; border-radius:6px; background:#fff; display:block; cursor:zoom-in; transition: transform .12s ease, box-shadow .12s ease; }
+  .fig-img:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(20,24,34,.10); }
+  /* lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(20,24,34,.78); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; padding: 32px; cursor: zoom-out; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+  .lightbox.open { opacity: 1; pointer-events: auto; }
+  .lightbox img { max-width: 96vw; max-height: 86vh; border-radius: 8px; background: #fff; box-shadow: 0 12px 60px rgba(0,0,0,.5); }
+  .lightbox .lb-cap { color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: 12px; margin-top: 14px; opacity: .85; }
+  .lightbox .lb-close { position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font: inherit; font-size: 12px; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
+  .lightbox .lb-close:hover { background: rgba(255,255,255,.2); }
+  /* gentle pulse for status pills */
+  .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+  /* =========================================================================
+     2000s GOVERNMENT-WEBSITE OVERRIDE
+     Hard corners, no shadows, no bubbles. Arial/Verdana body, Courier mono.
+     Navy + cream + black + government red. Native form chrome.
+     ========================================================================= */
+  *, *::before, *::after { border-radius: 0 !important; box-shadow: none !important; transition: none !important; }
+  body, button, input, select, textarea {
+    font-family: Arial, Verdana, "Helvetica Neue", sans-serif !important;
+    font-size: 13px !important; letter-spacing: 0 !important;
+  }
+  body { background: #f4f0e6 !important; color: #000 !important; line-height: 1.4 !important; -webkit-font-smoothing: subpixel-antialiased !important; }
+  /* Monospace falls back to Courier New */
+  [style*="IBM Plex Mono"], [style*="monospace"] { font-family: "Courier New", Courier, monospace !important; }
+
+  /* Top-of-page status banner (the .vault-title block in sidebar mirrors this) */
+  header {
+    background: #003366 !important;
+    border: 2px solid #002244 !important;
+    color: #fff !important;
+    padding: 8px 14px !important;
+  }
+  header > div > div { color: #fff !important; }
+  header span[style*="#b23b34"] { color: #ffcc33 !important; }
+  header [style*="#6b7280"] { color: #cbd5e1 !important; }
+  header [style*="#161a22"] { color: #fff !important; }
+  header [style*="border-left"] { border-color: #4a6280 !important; }
+
+  /* Cards / sections - flat white with hard black hairline */
+  main.content section, main.content .pane, main.content > div > div {
+    background: #fff !important;
+    border: 1px solid #000 !important;
+    padding-top: 0 !important;
+  }
+  main.content section { margin-bottom: 0 !important; }
+  main.content > section + section, main.content > nav + section { margin-top: 10px !important; }
+  /* Restore inner padding for top-level cards but preserve hard borders */
+  main.content > section, main.content > div > section, main.content > div > div[id^="tab-"] section {
+    padding: 0 !important;
+  }
+  /* Section heading bar - like a "form title" cell on a gov site */
+  main.content h2 {
+    background: #003366 !important;
+    color: #fff !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    letter-spacing: .05em !important;
+    padding: 5px 12px !important;
+    margin: 0 0 0 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+  /* Give the section bodies their padding back (the H2 sits at top, body below) */
+  main.content section > *:not(h2):not(.section-band) { margin-left: 0 !important; }
+  main.content section > div, main.content section > p, main.content section > table {
+    padding: 12px 14px !important;
+  }
+  /* Eliminate that top flex hat with sub-headings - convert to single bar */
+  main.content section > div[style*="justify-content:space-between"][style*="align-items:baseline"] {
+    background: #f4f0e6 !important;
+    border-bottom: 1px solid #888 !important;
+    padding: 6px 12px !important;
+  }
+  main.content section > div[style*="justify-content:space-between"][style*="align-items:baseline"] h2 {
+    background: transparent !important;
+    color: #003366 !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Nav rail (the "Obsidian sidebar") → gov navigation: cream beige with navy header */
+  .sidebar {
+    background: #e8e2d0 !important;
+    border-right: 2px solid #003366 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  .sidebar .vault-title {
+    background: #003366 !important;
+    color: #fff !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    padding: 10px 14px 4px !important;
+    letter-spacing: 0 !important;
+  }
+  .sidebar .vault-title span { color: #ffcc33 !important; }
+  .sidebar .vault-sub {
+    background: #003366 !important;
+    color: #cbd5e1 !important;
+    padding: 0 14px 8px !important;
+    font-family: "Courier New", monospace !important;
+    font-size: 10px !important;
+    border-bottom: 2px solid #002244 !important;
+  }
+  .sidebar .section-label {
+    background: #c8c0a8 !important;
+    color: #003366 !important;
+    border-top: 1px solid #aaa395 !important;
+    border-bottom: 1px solid #aaa395 !important;
+    padding: 4px 14px !important;
+    margin: 0 !important;
+    font-family: Arial, sans-serif !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    font-size: 10px !important;
+    letter-spacing: .06em !important;
+  }
+  .sidebar .nav-item {
+    color: #0033aa !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px dotted #aaa395 !important;
+    padding: 7px 14px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+  }
+  .sidebar .nav-item:hover { background: #f2eedf !important; color: #002277 !important; }
+  .sidebar .nav-item.active { background: #003366 !important; color: #ffcc33 !important; text-decoration: none !important; font-weight: bold !important; }
+  .sidebar .nav-item .meta { font-family: "Courier New", monospace !important; opacity: .6 !important; }
+  .sidebar .sb-kpi {
+    background: #fff !important;
+    border-bottom: 1px solid #888 !important;
+    padding: 6px 12px !important;
+  }
+  .sidebar .sb-kpi .k { font-family: Arial, sans-serif !important; color: #555 !important; font-weight: normal !important; letter-spacing: 0 !important; text-transform: none !important; font-size: 10.5px !important; }
+  .sidebar .sb-kpi .v { font-family: "Courier New", monospace !important; color: #000 !important; font-weight: bold !important; font-size: 17px !important; }
+  .sidebar .sb-kpi .sub { font-family: "Courier New", monospace !important; color: #666 !important; font-size: 10px !important; }
+  .sidebar .vault-foot {
+    background: #003366 !important;
+    color: #cbd5e1 !important;
+    font-family: "Courier New", monospace !important;
+    padding: 8px 14px !important;
+    margin-top: 0 !important;
+    border-top: 2px solid #002244 !important;
+  }
+
+  /* Form chrome - native, no bubbles */
+  button {
+    border: 1px solid #555 !important;
+    background: linear-gradient(#fafafa, #e2e2e2) !important;
+    color: #000 !important;
+    padding: 4px 12px !important;
+    font-weight: normal !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+  }
+  button:hover:not(:disabled) { background: linear-gradient(#fff, #d0d0d0) !important; border-color: #000 !important; }
+  button:active:not(:disabled) { background: #c8c8c8 !important; }
+  button:disabled { color: #999 !important; background: #ececec !important; border-color: #ccc !important; }
+  /* The two primary action buttons (Compress / Decompress / Retrieve / Random)
+     get the classic gov blue */
+  #comp-btn, #go { background: #003366 !important; color: #fff !important; border: 1px solid #001a33 !important; font-weight: bold !important; }
+  #comp-btn:hover:not(:disabled), #go:hover { background: #004488 !important; }
+  #dec-btn { background: #555 !important; color: #fff !important; border: 1px solid #222 !important; font-weight: bold !important; }
+  #dec-btn:hover:not(:disabled) { background: #777 !important; }
+  input[type=text], select {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 3px 6px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+  }
+  input[type=text]:focus, select:focus { border-color: #003366 !important; outline: 1px solid #003366 !important; outline-offset: -1px !important; }
+  input[type=range] { accent-color: #003366 !important; }
+
+  /* Links: underlined, blue */
+  a { color: #0033aa !important; text-decoration: underline !important; }
+  a:visited { color: #551a8b !important; }
+
+  /* Drop zones: solid dashed, gov-ish */
+  #comp-drop, #dec-drop {
+    border: 2px dashed #555 !important;
+    background: #fafaf2 !important;
+  }
+  #comp-drop:hover, #dec-drop:hover { background: #fff8d6 !important; }
+
+  /* Cards within sections (the inner compress/decompress workspace blocks) */
+  main.content section section,
+  main.content section > div > div[style*="border:1px solid #e9ecf3"],
+  main.content section > div > div[style*="background:#fafbfd"] {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+  }
+
+  /* All-codecs table → real ruled table */
+  table.codec-table, #codec-table {
+    border: 1px solid #000 !important;
+    background: #fff !important;
+  }
+  #codec-table th { background: #003366 !important; color: #fff !important; border: 1px solid #002244 !important; font-family: Arial, sans-serif !important; }
+  #codec-table td { border: 1px solid #ccc !important; font-family: "Courier New", monospace !important; }
+  tr.codec-row:hover td { background: #fff8d6 !important; }
+
+  /* Tabs - file-folder style without the rounding */
+  nav[role="tablist"] { background: transparent !important; border: none !important; padding: 0 !important; }
+
+  /* KPI mini-cells in the original strip area (now in sidebar; harmless if not present) */
+  .kpi-grid, .kpi-cell { border: 1px solid #000 !important; }
+
+  /* Retrieval result cards (NeuroZip / Fidelity panes) */
+  .panes > div, [id^="gt-"], #gt-nzn, #gt-fid {
+    background: #fff !important;
+    border: 1px solid #888 !important;
+  }
+  /* Retrieved image cards */
+  #grid-nzn > div, #grid-fid > div {
+    border: 1px solid #888 !important;
+    background: #fff !important;
+  }
+  #grid-nzn > div.ring-gold, #grid-fid > div.ring-gold { border: 2px solid #2a7a35 !important; }
+  #grid-nzn > div.ring-selected, #grid-fid > div.ring-selected { border: 2px solid #b00 !important; }
+
+  /* Reconstruction-viewer figure cells */
+  .fig-img { background: #000 !important; border: 1px solid #555 !important; cursor: zoom-in !important; }
+  .fig-img:hover { transform: none !important; }
+
+  /* Lightbox - keep dim background but lose the rounding */
+  .lightbox img { background: #000 !important; }
+  .lightbox .lb-close { font-family: Arial, sans-serif !important; }
+
+  /* Footer */
+  footer { background: #003366 !important; color: #cbd5e1 !important; padding: 8px 14px !important; border-top: 2px solid #002244 !important; font-family: "Courier New", monospace !important; text-align: left !important; }
+
+  /* Tabbed-page wrappers shouldn't double-border with their children.
+     NOTE: don't put `display: block !important` on #tab-workspace here  - 
+     that would override the JS-set `display: none` for the inactive tab. */
+  #tab-demo, #tab-workspace { background: transparent !important; border: none !important; padding: 0 !important; }
+  #tab-demo > section { display: block !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== Obsidian-style left sidebar ===== -->
+  <aside class="sidebar" aria-label="primary navigation">
+    <div class="vault-title">Neuro<span>Zip</span></div>
+    <div class="vault-sub">v4 · 0.75M params</div>
+
+    <div class="section-label">workbench</div>
+    <button id="tab-btn-demo" class="nav-item active" role="tab" aria-selected="true" data-tab="demo">
+      <span class="ico" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      </span>
+      Inference demo
+      <span class="meta">/#demo</span>
+    </button>
+    <button id="tab-btn-workspace" class="nav-item" role="tab" aria-selected="false" data-tab="workspace">
+      <span class="ico" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1.5"/><rect x="3" y="10" width="18" height="10" rx="1.5"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      </span>
+      Codec workspace
+      <span class="meta">/#workspace</span>
+    </button>
+
+    <div class="section-label">live metrics</div>
+    <div class="sb-kpi">
+      <div class="k">NeuroZip top-5</div>
+      <div class="v" id="kpi-nzn-t5"> - </div>
+      <div class="sub">task-aware</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">Fidelity top-5</div>
+      <div class="v" id="kpi-fid-t5"> - </div>
+      <div class="sub">MSE-only baseline</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">retrieval lift</div>
+      <div class="v" id="kpi-lift"> - </div>
+      <div class="sub">at matched tier</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">compression</div>
+      <div class="v" id="kpi-ratio"> - </div>
+      <div class="sub" id="kpi-bpp"> - bpp</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">judge ceiling</div>
+      <div class="v" id="kpi-ceiling"> - </div>
+      <div class="sub">raw EEG, top-5</div>
+    </div>
+    <div class="sb-kpi">
+      <div class="k">test concepts</div>
+      <div class="v">200</div>
+      <div class="sub">80 reps each</div>
+    </div>
+
+    <div class="section-label">references</div>
+    <a class="nav-item" href="https://huggingface.co/datasets/Haitao999/things-eeg" target="_blank" style="text-decoration:none;">
+      <span class="ico" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12a0 0 0 0 1-0 0H4z"/><polyline points="16,4 16,8 20,8"/></svg>
+      </span>
+      THINGS-EEG
+    </a>
+
+    <div class="vault-foot">
+      Flask backend on <span id="sb-port">:8011</span><br>
+      <span id="sb-gen"> - </span> · THINGS-EEG · sub-01
+    </div>
+  </aside>
+
+  <!-- ===== Main content rail ===== -->
+  <main class="content">
+
+  <!-- Top bar -->
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:24px;background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:14px 22px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+    <div style="display:flex;align-items:baseline;gap:14px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#b23b34;font-weight:600;letter-spacing:.14em;text-transform:uppercase;">task-aware EEG compression</div>
+      <div style="color:#6b7280;font-size:12.5px;border-left:1px solid #e3e6ee;padding-left:14px;">A codec that spends bits on the CLIP-decodable <span style="color:#161a22;font-weight:500;">meaning</span> of an EEG epoch - so the compressed corpus stays text-searchable.</div>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;white-space:nowrap;" id="hdr-meta">THINGS-EEG · sub-01</div>
+  </header>
+
+
+  <!-- Codec workspace -->
+  <section id="tab-workspace" role="tabpanel" style="display:none;background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <h2 style="font-size:14px;font-weight:600;margin:0;">Codec workspace</h2>
+        <span style="font-size:11.5px;color:#8b92a4;">run the trained model on your own EEG epochs</span>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;display:flex;align-items:center;gap:7px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#1f9d55;display:inline-block;"></span>
+        model <span id="model-tag"> - </span> · torch · loaded
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+      <!-- COMPRESS -->
+      <div style="border:1px solid #e9ecf3;border-radius:10px;padding:15px;background:#fcfdff;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#fff;background:#b23b34;padding:2px 7px;border-radius:5px;letter-spacing:.05em;">COMPRESS</span>
+          <span style="font-size:12px;color:#6b7280;">EEG epoch <span style="font-family:'IBM Plex Mono',monospace;">.npy</span> → <span style="font-family:'IBM Plex Mono',monospace;">.nz</span></span>
+        </div>
+
+        <label id="comp-drop" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border:1.5px dashed #cfd5e2;border-radius:9px;padding:18px 12px;cursor:pointer;background:#f7f9fc;min-height:88px;">
+          <div id="comp-file-name" style="font-size:13px;font-weight:600;color:#3b4252;">drop EEG epoch or click to browse</div>
+          <div id="comp-file-meta" style="font-size:11px;color:#9aa1b2;font-family:'IBM Plex Mono',monospace;">.npy · 63 × 250 float · or pick a demo</div>
+          <input type="file" id="comp-file-input" accept=".npy,.pkl,.bin" class="file-input" />
+        </label>
+
+        <div style="display:grid;grid-template-columns:1.4fr auto 1fr 1fr;gap:8px;margin-top:11px;">
+          <select id="comp-demo" title="load a real EEG epoch from THINGS-EEG as if you'd uploaded its .npy" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#4b5263;">
+            <option value="">Load example .npy…</option>
+          </select>
+          <a id="comp-dl-example" href="#" title="download the selected example .npy to your disk" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:11.5px;color:#8b92a4;text-decoration:none;font-family:'IBM Plex Mono',monospace;pointer-events:none;opacity:.5;" target="_blank">↓ .npy</a>
+          <select id="comp-variant" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#161a22;">
+            <option value="neurozip">neurozip</option>
+            <option value="fidelity">fidelity</option>
+          </select>
+          <select id="comp-tier" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#161a22;"></select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:11px;margin-top:11px;">
+          <button id="comp-btn" style="padding:9px 20px;border-radius:8px;border:none;background:#b23b34;color:#fff;font:inherit;font-weight:600;font-size:13px;cursor:pointer;opacity:.5;" disabled>Compress</button>
+          <span id="comp-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b92a4;">awaiting file</span>
+        </div>
+
+        <!-- Input EEG preview (visible after a file/example is loaded) -->
+        <div id="comp-input-preview" style="display:none;margin-top:13px;padding:10px;background:#fff;border:1px solid #e9ecf3;border-radius:9px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;">input EEG <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></span>
+            <span id="comp-input-preview-meta" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b92a4;"> - </span>
+          </div>
+          <img id="comp-input-fig" class="fig-img" data-cap="input EEG (before compression)" alt="" style="height:170px;"/>
+        </div>
+
+        <div id="comp-result" style="display:none;margin-top:13px;padding:12px 13px;background:#fff;border:1px solid #e9ecf3;border-radius:9px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span id="comp-out-name" style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#161a22;"> - </span>
+            <button id="comp-dl" style="padding:6px 13px;border-radius:7px;border:1px solid #dfe3ec;background:#f1f3f7;color:#3b4252;font:inherit;font-weight:600;font-size:11.5px;cursor:pointer;">↓ download</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-family:'IBM Plex Mono',monospace;">
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">size</div><div id="comp-out-bytes" style="font-size:14px;font-weight:600;color:#b23b34;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">ratio</div><div id="comp-out-ratio" style="font-size:14px;font-weight:600;color:#161a22;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">bpp</div><div id="comp-out-bpp" style="font-size:14px;font-weight:600;color:#4b5263;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">mse</div><div id="comp-out-mse" style="font-size:14px;font-weight:600;color:#4b5263;"> - </div></div>
+          </div>
+          <div id="comp-out-tail" style="font-size:11px;color:#9aa1b2;margin-top:9px;font-family:'IBM Plex Mono',monospace;"> - </div>
+          <div style="margin-top:11px;padding-top:11px;border-top:1px solid #eceff5;">
+            <div style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">reconstruction <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+            <img id="comp-recon-fig" class="fig-img" data-cap="codec reconstruction (after compress → decompress)" alt="" style="height:170px;"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- DECOMPRESS -->
+      <div style="border:1px solid #e9ecf3;border-radius:10px;padding:15px;background:#fcfdff;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#fff;background:#3b4252;padding:2px 7px;border-radius:5px;letter-spacing:.05em;">DECOMPRESS</span>
+          <span style="font-size:12px;color:#6b7280;">compressed <span style="font-family:'IBM Plex Mono',monospace;">.nz</span> → EEG native <span style="font-family:'IBM Plex Mono',monospace;">.npy</span></span>
+        </div>
+
+        <label id="dec-drop" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border:1.5px dashed #cfd5e2;border-radius:9px;padding:18px 12px;cursor:pointer;background:#f7f9fc;min-height:88px;">
+          <div id="dec-file-name" style="font-size:13px;font-weight:600;color:#3b4252;">drop .nz / .pkl or click to browse</div>
+          <div id="dec-file-meta" style="font-size:11px;color:#9aa1b2;font-family:'IBM Plex Mono',monospace;">compressed bitstream from the codec</div>
+          <input type="file" id="dec-file-input" accept=".nz,.pkl,.bin,.npz" class="file-input" />
+        </label>
+
+        <div style="display:grid;grid-template-columns:1.4fr auto;gap:8px;margin-top:11px;">
+          <select id="dec-demo" title="load a pre-compressed example .nz from the test set" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:12px;color:#4b5263;">
+            <option value="">Load example .nz…</option>
+          </select>
+          <a id="dec-dl-example" href="#" title="download the selected example .nz to your disk" style="padding:8px 9px;border:1px solid #dfe3ec;border-radius:7px;background:#fff;font-size:11.5px;color:#8b92a4;text-decoration:none;font-family:'IBM Plex Mono',monospace;pointer-events:none;opacity:.5;" target="_blank">↓ .nz</a>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:11px;margin-top:11px;">
+          <button id="dec-btn" style="padding:9px 20px;border-radius:8px;border:none;background:#3b4252;color:#fff;font:inherit;font-weight:600;font-size:13px;cursor:pointer;opacity:.5;" disabled>Decompress</button>
+          <span id="dec-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b92a4;">awaiting file</span>
+          <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9aa1b2;">tip: feed back what you just compressed</span>
+        </div>
+
+        <div id="dec-result" style="display:none;margin-top:13px;padding:12px 13px;background:#fff;border:1px solid #e9ecf3;border-radius:9px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span id="dec-out-name" style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#161a22;"> - </span>
+            <button id="dec-dl" style="padding:6px 13px;border-radius:7px;border:1px solid #dfe3ec;background:#f1f3f7;color:#3b4252;font:inherit;font-weight:600;font-size:11.5px;cursor:pointer;">↓ download</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;font-family:'IBM Plex Mono',monospace;">
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">shape</div><div id="dec-out-shape" style="font-size:14px;font-weight:600;color:#161a22;">63 × 250</div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">size</div><div id="dec-out-bytes" style="font-size:14px;font-weight:600;color:#4b5263;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">dtype</div><div style="font-size:14px;font-weight:600;color:#4b5263;">float16</div></div>
+          </div>
+          <div id="dec-out-tail" style="font-size:11px;color:#9aa1b2;margin-top:9px;font-family:'IBM Plex Mono',monospace;">decoded · z-norm reversed with stored channel stats</div>
+          <div style="margin-top:11px;padding-top:11px;border-top:1px solid #eceff5;">
+            <div style="font-size:9.5px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">decoded EEG <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+            <img id="dec-out-fig" class="fig-img" data-cap="decompressed EEG" alt="" style="height:170px;"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Inference-demo tab ===== -->
+  <div id="tab-demo" role="tabpanel" style="display:flex;flex-direction:column;gap:14px;">
+
+  <!-- Main grid -->
+  <section style="display:grid;grid-template-columns:1.55fr 1fr;gap:14px;align-items:start;">
+
+    <!-- LEFT: retrieval console -->
+    <div style="background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">
+        <h2 style="font-size:14px;font-weight:600;margin:0;letter-spacing:.01em;">Text→EEG retrieval</h2>
+        <div id="query-meta" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b7280;text-align:right;"> - </div>
+      </div>
+
+      <!-- Controls -->
+      <div style="display:grid;grid-template-columns:1.6fr 1.2fr auto;gap:10px;margin-bottom:12px;">
+        <input id="query-text" type="text" placeholder="free-text query - e.g. a small flightless bird" style="width:100%;padding:9px 11px;border:1px solid #dfe3ec;border-radius:8px;background:#fbfcfe;font-size:13px;color:#161a22;" />
+        <select id="concept-sel" style="width:100%;padding:9px 11px;border:1px solid #dfe3ec;border-radius:8px;background:#fbfcfe;font-size:13px;color:#161a22;"></select>
+        <button id="random-btn" style="padding:9px 16px;border-radius:8px;border:1px solid #dfe3ec;background:#f1f3f7;color:#4b5263;font:inherit;font-weight:600;font-size:13px;cursor:pointer;">Random</button>
+      </div>
+
+      <!-- Tier slider -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:10px 12px;background:#fafbfd;border:1px solid #eceef4;border-radius:8px;">
+        <span style="font-size:10px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;">tier</span>
+        <input id="tier-input" type="range" min="0" max="3" step="1" value="2" style="flex:1;" />
+        <span id="tier-readout" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4b5263;white-space:nowrap;"> - </span>
+      </div>
+
+      <!-- Panes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <!-- NeuroZip -->
+        <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:10px;padding:13px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+            <div style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;"><span style="width:7px;height:7px;border-radius:50%;background:#b23b34;display:inline-block;"></span> NeuroZip</div>
+            <div id="nzn-badge" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;"> - </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:11px;">
+            <img id="gt-nzn-img" style="width:34px;height:34px;border-radius:6px;border:2px solid #1f9d55;object-fit:cover;flex-shrink:0;" />
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.07em;">ground truth</div><div id="gold-name-nzn" style="font-size:14px;font-weight:600;line-height:1.2;"> - </div></div>
+          </div>
+          <div id="grid-nzn" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid #e9ecf3;font-family:'IBM Plex Mono',monospace;">
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">top-5</div><div id="nzn-top5-cell" style="font-size:15px;font-weight:600;color:#b23b34;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">held-out</div><div id="nzn-hold-cell" style="font-size:15px;font-weight:600;color:#161a22;"> - </div></div>
+            <div style="text-align:right;"><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">mse</div><div id="nzn-mse-cell" style="font-size:15px;font-weight:600;color:#4b5263;"> - </div></div>
+          </div>
+        </div>
+        <!-- Fidelity -->
+        <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:10px;padding:13px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+            <div style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;"><span style="width:7px;height:7px;border-radius:50%;background:#707888;display:inline-block;"></span> Fidelity baseline</div>
+            <div id="fid-badge" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7280;"> - </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:11px;">
+            <img id="gt-fid-img" style="width:34px;height:34px;border-radius:6px;border:2px solid #1f9d55;object-fit:cover;flex-shrink:0;" />
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.07em;">ground truth</div><div id="gold-name-fid" style="font-size:14px;font-weight:600;line-height:1.2;"> - </div></div>
+          </div>
+          <div id="grid-fid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid #e9ecf3;font-family:'IBM Plex Mono',monospace;">
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">top-5</div><div id="fid-top5-cell" style="font-size:15px;font-weight:600;color:#161a22;"> - </div></div>
+            <div><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">held-out</div><div id="fid-hold-cell" style="font-size:15px;font-weight:600;color:#161a22;"> - </div></div>
+            <div style="text-align:right;"><div style="font-size:9px;color:#8b92a4;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Sans';">mse</div><div id="fid-mse-cell" style="font-size:15px;font-weight:600;color:#4b5263;"> - </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: codec table -->
+    <div style="background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+        <h2 style="font-size:14px;font-weight:600;margin:0;">All codecs at a glance</h2>
+        <span style="font-size:11px;color:#8b92a4;">lower bpp = smaller · higher top-k = more meaning</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11.5px;">
+        <thead><tr>
+          <th style="text-align:left;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">codec</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">bpp</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">ratio</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">mse</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">top-1</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">top-5</th>
+          <th style="text-align:right;padding:7px 6px;color:#8b92a4;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e3e6ee;">held</th>
+        </tr></thead>
+        <tbody id="codec-tbody"></tbody>
+      </table>
+      <div style="margin-top:13px;padding:11px 13px;background:#fafbfd;border:1px solid #e9ecf3;border-radius:8px;font-size:11.5px;line-height:1.55;color:#4b5263;">
+        <b style="color:#161a22;">Why NeuroZip's bpp is higher per tier:</b> the task loss makes it keep the CLIP-decodable structure fidelity throws away. More meaning costs more bits - and the retrieval lift is what you buy with them.
+      </div>
+    </div>
+  </section>
+
+  <!-- Reconstruction viewer -->
+  <section style="background:#fff;border:1px solid #e3e6ee;border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(20,24,34,.04);">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:13px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <h2 style="font-size:14px;font-weight:600;margin:0;">Reconstruction viewer</h2>
+        <span style="font-size:11.5px;color:#8b92a4;">click any retrieved epoch to inspect</span>
+      </div>
+      <div id="viewer-meta" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4b5263;"> - </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:9px;padding:12px;">
+        <div style="font-size:10px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;">channel × time heatmap <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+        <img id="fig-heatmap" class="fig-img" data-cap="channel × time heatmap - raw vs decompressed (top-3 rows)" alt="" />
+      </div>
+      <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:9px;padding:12px;">
+        <div style="font-size:10px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;">per-channel waveforms <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+        <img id="fig-waveforms" class="fig-img" data-cap="per-channel waveforms - raw (black) · NeuroZip (red) · fidelity (gray)" alt="" />
+      </div>
+      <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:9px;padding:12px;">
+        <div style="font-size:10px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;">reconstruction error |Δ| <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+        <img id="fig-diff" class="fig-img" data-cap="reconstruction error |raw − decompressed| - shared color scale across codecs" alt="" />
+      </div>
+      <div style="background:#fafbfd;border:1px solid #e9ecf3;border-radius:9px;padding:12px;">
+        <div style="font-size:10px;font-weight:600;color:#4b5263;text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;">quantized latent (the shipped data) <span style="color:#8b92a4;font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:6px;">click to zoom</span></div>
+        <img id="fig-latent" class="fig-img" data-cap="quantized latent - 32×32 integer symbols, the data shipped over the wire" alt="" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox: shared zoom popup for any .fig-img click -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+    <button id="lb-close" class="lb-close" aria-label="close (Esc)">close (esc)</button>
+    <img id="lb-img" alt="" />
+    <div id="lb-cap" class="lb-cap"> - </div>
+  </div>
+
+  </div><!-- /#tab-demo -->
+
+  <footer style="color:#8b92a4;font-size:11px;font-family:'IBM Plex Mono',monospace;text-align:center;padding:6px 0 4px;">
+    THINGS-EEG (Gifford 2022; Wu CVPR 2025) · CLIP ViT-B-32 / laion2b_s34b_b79k · live inference via serve.py · see ARCHITECTURE.md
+  </footer>
+
+  </main><!-- /.content -->
+</div><!-- /.app -->
+
+<script>
+(async function() {
+  const fmtPct = (x, d=1) => (x == null ? " - " : (100*x).toFixed(d) + "%");
+  const fmtBytes = (n) => n == null ? " - " : (n >= 1024 ? (n/1024).toFixed(1) + " KB" : n + " B");
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // ---------- lightbox (click any reconstruction figure to zoom) ----------
+  const lb     = document.getElementById("lightbox");
+  const lbImg  = document.getElementById("lb-img");
+  const lbCap  = document.getElementById("lb-cap");
+  const lbClose = document.getElementById("lb-close");
+  function openLightbox(src, cap) {
+    if (!src) return;
+    lbImg.src = src;
+    lbCap.textContent = cap || "";
+    lb.classList.add("open");
+    lb.setAttribute("aria-hidden", "false");
+  }
+  function closeLightbox() {
+    lb.classList.remove("open");
+    lb.setAttribute("aria-hidden", "true");
+    // Defer src clear so the close transition runs first.
+    setTimeout(() => { if (!lb.classList.contains("open")) lbImg.src = ""; }, 200);
+  }
+  // Bind once-per-image click → lightbox. Re-callable so dynamically-added
+  // figures (workspace previews) pick it up too.
+  function bindLightbox(root = document) {
+    for (const img of root.querySelectorAll(".fig-img")) {
+      if (img.dataset.lbBound) continue;
+      img.dataset.lbBound = "1";
+      img.addEventListener("click", () => { if (img.src) openLightbox(img.src, img.dataset.cap || ""); });
+    }
+  }
+  bindLightbox();
+  // Click background OR the close button to dismiss; ignore clicks on the img itself.
+  lb.addEventListener("click", e => { if (e.target === lb) closeLightbox(); });
+  lbClose.addEventListener("click", closeLightbox);
+  window.addEventListener("keydown", e => { if (e.key === "Escape" && lb.classList.contains("open")) closeLightbox(); });
+
+  // ---------- tab switching ----------
+  function switchTab(name) {
+    const isDemo = (name !== "workspace");
+    document.getElementById("tab-demo").style.display       = isDemo ? "flex" : "none";
+    document.getElementById("tab-workspace").style.display  = isDemo ? "none" : "block";
+    for (const btn of document.querySelectorAll('[role="tab"]')) {
+      const on = btn.dataset.tab === (isDemo ? "demo" : "workspace");
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.classList.toggle("active", on);
+    }
+    const target = isDemo ? "#demo" : "#workspace";
+    if (location.hash !== target) history.replaceState(null, "", target);
+  }
+  document.getElementById("tab-btn-demo").addEventListener("click", () => switchTab("demo"));
+  document.getElementById("tab-btn-workspace").addEventListener("click", () => switchTab("workspace"));
+  window.addEventListener("hashchange", () => switchTab(location.hash.replace(/^#/, "")));
+  // Initial tab from URL hash, default to demo.
+  switchTab(location.hash.replace(/^#/, "") || "demo");
+
+  // ---------- bootstrap ----------
+  const [models, conceptsResp, baseline] = await Promise.all([
+    fetch("/api/models").then(r => r.json()),
+    fetch("/api/concepts").then(r => r.json()),
+    fetch("/api/baseline").then(r => r.json()),
+  ]);
+  const concepts = conceptsResp.concepts;
+
+  // pick the freshest available generation (v4 > v3 > v2 > v1)
+  function pickGen() {
+    for (const g of ["v4","v3","v2"]) {
+      const f = Object.keys(models).some(n => n.startsWith("fidelity") && n.includes(`_${g}_`));
+      const z = Object.keys(models).some(n => n.startsWith("neurozip") && n.includes(`_${g}_`));
+      if (f && z) return g;
+    }
+    return "v1";
+  }
+  const GEN = pickGen();
+  const inFam = (n, side) => GEN === "v1"
+      ? (n.startsWith(side) && !/_v[234]_/.test(n))
+      : (n.startsWith(side) && n.includes(`_${GEN}_`));
+  const fidModels = Object.entries(models).filter(([n]) => inFam(n, "fidelity")).sort((a,b) => a[1].bpp - b[1].bpp);
+  const nznModels = Object.entries(models).filter(([n]) => inFam(n, "neurozip")).sort((a,b) => a[1].bpp - b[1].bpp);
+  const tiers = Math.min(fidModels.length, nznModels.length);
+  const TIER_NAMES = (tiers === 4)
+    ? ["low - most compression","med","high","xhigh - least"]
+    : ["high compression","medium","low compression"];
+
+  document.getElementById("hdr-meta").textContent = `${GEN.toUpperCase()} · 0.75M params · THINGS-EEG sub-01`;
+  document.getElementById("kpi-ceiling").textContent = fmtPct(baseline.raw_eeg.top5);
+  document.getElementById("sb-gen").textContent = `${GEN.toUpperCase()} codecs loaded`;
+  document.getElementById("sb-port").textContent = `:${location.port || "8011"}`;
+
+  // ---------- KPI strip (live with tier) ----------
+  let tier = Math.min(tiers - 1, 2);
+  let goldIdx = 6;
+  let selectedEpoch = goldIdx;
+  let lastQuery = { concept_idx: goldIdx };
+
+  function pair() { return { fidName: fidModels[tier][0], nznName: nznModels[tier][0] }; }
+
+  function setKpis() {
+    const { nznName, fidName } = pair();
+    const nzn = models[nznName], fid = models[fidName];
+    document.getElementById("kpi-nzn-t5").textContent = fmtPct(nzn.img_top5);
+    document.getElementById("kpi-fid-t5").textContent = fmtPct(fid.img_top5);
+    document.getElementById("kpi-lift").textContent =
+      `${((nzn.img_top5 - fid.img_top5) * 100).toFixed(1)} pp`;
+    document.getElementById("kpi-ratio").textContent = `${nzn.ratio.toFixed(0)}×`;
+    document.getElementById("kpi-bpp").textContent = `${nzn.bpp.toFixed(3)} bpp`;
+    document.getElementById("tier-readout").textContent =
+      `${TIER_NAMES[tier] || "tier "+(tier+1)} · ${nzn.ratio.toFixed(0)}× · ${nzn.bpp.toFixed(3)} bpp`;
+  }
+
+  // ---------- codec table ----------
+  function renderCodecTable() {
+    const tbody = document.getElementById("codec-tbody"); tbody.innerHTML = "";
+    const all = [...fidModels, ...nznModels].sort((a,b) => a[1].bpp - b[1].bpp);
+    for (const [n, m] of all) {
+      const us = n.startsWith("neurozip");
+      const tr = document.createElement("tr");
+      tr.className = "codec-row";
+      tr.style.background = us ? "#fdf4f3" : "transparent";
+      tr.innerHTML = `
+        <td style="text-align:left;padding:7px 6px;border-bottom:1px solid #f1f3f7;font-weight:500;color:${us ? '#b23b34' : '#161a22'};">${n}</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;color:#4b5263;">${m.bpp.toFixed(3)}</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;color:#4b5263;">${m.ratio.toFixed(0)}×</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;color:#4b5263;">${(m.mse ?? 0).toFixed(4)}</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;color:#4b5263;">${fmtPct(m.img_top1)}</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;font-weight:600;color:${us ? '#b23b34' : '#4b5263'};">${fmtPct(m.img_top5)}</td>
+        <td style="text-align:right;padding:7px 6px;border-bottom:1px solid #f1f3f7;color:#4b5263;">${fmtPct(m.holdout_top1)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ---------- concept dropdown ----------
+  let featured = [];
+  try { featured = (await fetch("/demo/assets/summary.json").then(r => r.json())).featured || []; } catch {}
+  const sel = document.getElementById("concept-sel");
+  if (featured.length) {
+    const og = document.createElement("optgroup"); og.label = "featured - NeuroZip wins most";
+    for (const i of featured) {
+      const o = document.createElement("option"); o.value = i; o.textContent = cap(concepts[i].replace(/_/g," "));
+      og.appendChild(o);
+    }
+    sel.appendChild(og);
+  }
+  const og2 = document.createElement("optgroup"); og2.label = "all concepts";
+  concepts.map((c, i) => ({c, i})).sort((a,b) => a.c.localeCompare(b.c)).forEach(({c, i}) => {
+    const o = document.createElement("option"); o.value = i; o.textContent = cap(c.replace(/_/g," "));
+    og2.appendChild(o);
+  });
+  sel.appendChild(og2);
+
+  // ---------- compress-workspace dropdowns ----------
+  const compTierSel = document.getElementById("comp-tier");
+  for (let i = 0; i < tiers; i++) {
+    const o = document.createElement("option");
+    o.value = i; o.textContent = TIER_NAMES[i].split(" ")[0];
+    if (i === tier) o.selected = true;
+    compTierSel.appendChild(o);
+  }
+  // ---------- example files: populate both compress + decompress dropdowns ----------
+  let examplesData = { examples: [], default_model: "neurozip_v4_high" };
+  try { examplesData = await fetch("/api/examples").then(r => r.json()); } catch {}
+  const compDemoSel = document.getElementById("comp-demo");
+  const decDemoSel  = document.getElementById("dec-demo");
+  for (const e of examplesData.examples) {
+    const o = document.createElement("option");
+    o.value = e.idx;
+    o.textContent = `${cap(e.concept.replace(/_/g," "))} (epoch #${e.idx})`;
+    compDemoSel.appendChild(o);
+    const o2 = o.cloneNode(true);
+    decDemoSel.appendChild(o2);
+  }
+
+  // ---------- retrieval ----------
+  async function runRetrieve() {
+    const { fidName, nznName } = pair();
+    const body = lastQuery.text != null
+      ? { text: lastQuery.text, models: [fidName, nznName], k: 5 }
+      : { concept_idx: lastQuery.concept_idx, models: [fidName, nznName], k: 5 };
+    document.getElementById("query-meta").innerHTML = `<span class="pulse-dot">●</span> querying…`;
+    const r = await fetch("/api/retrieve", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)}).then(r => r.json());
+    renderRetrieval(r, fidName, nznName);
+    goldIdx = r.query.nearest_concept_idx;
+    const nznTop = r.models[nznName].top_k_eeg_idx;
+    loadReconstruction(nznTop.includes(goldIdx) ? goldIdx : nznTop[0]);
+  }
+
+  function renderRetrieval(r, fidName, nznName) {
+    const goldName = cap(r.query.nearest_concept.replace(/_/g," "));
+    const nzn = r.models[nznName], fid = r.models[fidName];
+    document.getElementById("query-meta").innerHTML =
+      `${goldName} · gold rank <b style="color:#b23b34">${nzn.gold_rank+1}</b> (nz) · ${fid.gold_rank+1} (fid)`;
+    const m = models;
+    document.getElementById("nzn-badge").textContent = `${m[nznName].ratio.toFixed(0)}× · ${m[nznName].bpp.toFixed(3)} bpp`;
+    document.getElementById("fid-badge").textContent = `${m[fidName].ratio.toFixed(0)}× · ${m[fidName].bpp.toFixed(3)} bpp`;
+    document.getElementById("nzn-top5-cell").textContent = fmtPct(m[nznName].img_top5);
+    document.getElementById("fid-top5-cell").textContent = fmtPct(m[fidName].img_top5);
+    document.getElementById("nzn-hold-cell").textContent = fmtPct(m[nznName].holdout_top1);
+    document.getElementById("fid-hold-cell").textContent = fmtPct(m[fidName].holdout_top1);
+    document.getElementById("nzn-mse-cell").textContent = (m[nznName].mse ?? 0).toFixed(4);
+    document.getElementById("fid-mse-cell").textContent = (m[fidName].mse ?? 0).toFixed(4);
+    document.getElementById("gold-name-nzn").textContent = goldName;
+    document.getElementById("gold-name-fid").textContent = goldName;
+    document.getElementById("gt-nzn-img").src = `/api/concept_image/${r.query.nearest_concept_idx}`;
+    document.getElementById("gt-fid-img").src = `/api/concept_image/${r.query.nearest_concept_idx}`;
+    renderCards("grid-nzn", nzn.top_k_eeg_idx, r.query.nearest_concept_idx);
+    renderCards("grid-fid", fid.top_k_eeg_idx, r.query.nearest_concept_idx);
+  }
+
+  function renderCards(gridId, idxs, gold) {
+    const grid = document.getElementById(gridId); grid.innerHTML = "";
+    idxs.forEach((idx, rank) => {
+      const isGold = idx === gold, isSel = idx === selectedEpoch;
+      const cls = isGold ? "ring-gold" : (isSel ? "ring-selected" : "ring-default");
+      const div = document.createElement("div");
+      div.className = cls;
+      div.style.cssText = "position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;background:#f1f3f7;display:flex;align-items:flex-end;";
+      div.innerHTML = `
+        <img src="/api/concept_image/${idx}" class="card-img" onerror="this.style.opacity=.3" />
+        <span style="position:absolute;top:3px;left:3px;background:rgba(20,24,34,.82);color:#fff;font-size:8px;font-weight:600;padding:0 4px;border-radius:3px;font-family:'IBM Plex Mono',monospace;z-index:1;">#${rank+1}</span>
+        <span style="position:relative;width:100%;background:linear-gradient(to top,rgba(20,24,34,.86),transparent);color:#fff;font-size:8px;padding:10px 3px 3px;font-weight:500;line-height:1.1;z-index:1;">${cap(concepts[idx].replace(/_/g," "))}</span>
+      `;
+      div.addEventListener("click", () => loadReconstruction(idx));
+      grid.appendChild(div);
+    });
+  }
+
+  async function loadReconstruction(epoch_idx) {
+    selectedEpoch = epoch_idx;
+    document.querySelectorAll(".ring-selected").forEach(el => el.className = "ring-default");
+    document.getElementById("viewer-meta").innerHTML = `epoch ${epoch_idx} · ${cap(concepts[epoch_idx].replace(/_/g," "))} &nbsp;·&nbsp; <span class="pulse-dot">●</span> rendering…`;
+    const { fidName, nznName } = pair();
+    const r = await fetch("/api/reconstruct", {method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({epoch_idx, models:[nznName, fidName], kinds:["heatmap","diff","waveforms","latent"]})}).then(r => r.json());
+    document.getElementById("fig-heatmap").src = r.figs.heatmap;
+    document.getElementById("fig-waveforms").src = r.figs.waveforms;
+    document.getElementById("fig-diff").src = r.figs.diff;
+    document.getElementById("fig-latent").src = r.figs.latent;
+    const nm = r.info.models[nznName], fm = r.info.models[fidName];
+    document.getElementById("viewer-meta").innerHTML =
+      `epoch ${epoch_idx} · ${cap(concepts[epoch_idx].replace(/_/g," "))} &nbsp;·&nbsp; ` +
+      `<span style="color:#b23b34">nz ${nm.bpp.toFixed(3)}bpp · MSE ${nm.mse.toFixed(4)}</span> &nbsp;` +
+      `<span style="color:#707888">fid ${fm.bpp.toFixed(3)}bpp · MSE ${fm.mse.toFixed(4)}</span>`;
+  }
+
+  // ---------- compress workspace ----------
+  function variantTierToModel(variant, tier) {
+    return (variant === "fidelity" ? fidModels : nznModels)[tier][0];
+  }
+  document.getElementById("model-tag").textContent = variantTierToModel("neurozip", tier);
+
+  let compEpochIdx = null;          // when set, /api/compress uses this; otherwise uses uploaded bytes
+  let compUploadedB64 = null;
+  let lastCompResult = null;
+
+  function setCompFileLabel(name, meta) {
+    document.getElementById("comp-file-name").textContent = name;
+    document.getElementById("comp-file-meta").textContent = meta;
+    document.getElementById("comp-btn").disabled = !(compEpochIdx != null || compUploadedB64);
+    document.getElementById("comp-btn").style.opacity = (compEpochIdx != null || compUploadedB64) ? "1" : ".5";
+    document.getElementById("comp-status").textContent = (compEpochIdx != null || compUploadedB64) ? "ready" : "awaiting file";
+  }
+  // Render the loaded input EEG into the preview slot (called whenever
+  // compEpochIdx or compUploadedB64 changes to something non-null).
+  async function previewCompInput(metaText) {
+    const wrap = document.getElementById("comp-input-preview");
+    const img  = document.getElementById("comp-input-fig");
+    const body = compEpochIdx != null ? {epoch_idx: compEpochIdx, title: "input EEG"}
+                                       : {bytes_b64: compUploadedB64, title: "input EEG (uploaded)"};
+    document.getElementById("comp-input-preview-meta").textContent = metaText || "rendering…";
+    wrap.style.display = "block";
+    img.src = "";
+    try {
+      const r = await fetch("/api/visualize_eeg", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)}).then(r => r.json());
+      img.src = r.fig;
+      img.dataset.cap = "input EEG (before compression)";
+      bindLightbox();
+      document.getElementById("comp-input-preview-meta").textContent = metaText || "loaded";
+    } catch (e) {
+      document.getElementById("comp-input-preview-meta").textContent = "render failed";
+    }
+  }
+
+  // Selecting a demo example fetches the real .npy from the server and loads
+  // it as if the user had uploaded it. That way the workspace is genuinely
+  // exercising the file-upload + compress path, not a server-side shortcut.
+  document.getElementById("comp-demo").addEventListener("change", async (e) => {
+    const v = e.target.value;
+    const dl = document.getElementById("comp-dl-example");
+    if (!v) {
+      dl.href = "#"; dl.style.pointerEvents = "none"; dl.style.opacity = ".5";
+      return;
+    }
+    const idx = +v;
+    const concept = cap(concepts[idx].replace(/_/g," "));
+    dl.href = `/api/demo_epoch/${idx}`;
+    dl.style.pointerEvents = "auto"; dl.style.opacity = "1"; dl.style.color = "#3b4252";
+    // Fetch the .npy through the upload path so users see the real round-trip.
+    setCompFileLabel(`fetching ${concept} (epoch #${idx})…`, "loading from server");
+    try {
+      const blob = await fetch(`/api/demo_epoch/${idx}`).then(r => r.blob());
+      compEpochIdx = null;
+      compUploadedB64 = await blobToB64(blob);
+      setCompFileLabel(`${concept}_idx${idx}.npy`, fmtBytes(blob.size) + " · loaded from /api/demo_epoch");
+      document.getElementById("comp-file-input").value = "";
+      previewCompInput(`${concept} · epoch #${idx} · ${fmtBytes(blob.size)}`);
+    } catch (err) {
+      setCompFileLabel("load failed", err.message || String(err));
+    }
+  });
+  function blobToB64(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(",", 2)[1]);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+  document.getElementById("comp-file-input").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    compEpochIdx = null;
+    compUploadedB64 = await blobToB64(f);
+    setCompFileLabel(f.name, fmtBytes(f.size) + " · uploaded");
+    previewCompInput(f.name + " · " + fmtBytes(f.size));
+  });
+  const cd = document.getElementById("comp-drop");
+  cd.addEventListener("dragover", e => e.preventDefault());
+  cd.addEventListener("drop", async e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return;
+    compEpochIdx = null;
+    compUploadedB64 = await blobToB64(f);
+    setCompFileLabel(f.name, fmtBytes(f.size) + " · dropped");
+    previewCompInput(f.name + " · " + fmtBytes(f.size));
+  });
+  document.getElementById("comp-variant").addEventListener("change", e => {
+    document.getElementById("model-tag").textContent = variantTierToModel(e.target.value, +document.getElementById("comp-tier").value);
+  });
+  document.getElementById("comp-tier").addEventListener("change", e => {
+    document.getElementById("model-tag").textContent = variantTierToModel(document.getElementById("comp-variant").value, +e.target.value);
+  });
+
+  document.getElementById("comp-btn").addEventListener("click", async () => {
+    const variant = document.getElementById("comp-variant").value;
+    const t = +document.getElementById("comp-tier").value;
+    const model = variantTierToModel(variant, t);
+    const body = (compEpochIdx != null) ? { epoch_idx: compEpochIdx, model } : { bytes_b64: compUploadedB64, model };
+    document.getElementById("comp-status").innerHTML = `<span class="pulse-dot">●</span> encoding…`;
+    document.getElementById("comp-btn").disabled = true;
+    try {
+      const r = await fetch("/api/compress", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body)}).then(r => r.json());
+      if (r.error) throw new Error(r.error);
+      lastCompResult = r;
+      document.getElementById("comp-result").style.display = "block";
+      document.getElementById("comp-out-name").textContent = r.filename;
+      document.getElementById("comp-out-bytes").textContent = fmtBytes(r.size_bytes);
+      document.getElementById("comp-out-ratio").textContent = r.ratio.toFixed(0) + "×";
+      document.getElementById("comp-out-bpp").textContent = r.bpp.toFixed(3);
+      document.getElementById("comp-out-mse").textContent = r.mse.toFixed(4);
+      // bpp/ratio are entropy-floor (the rate an ideal arithmetic coder would hit
+      // on this latent under the prior). The .nz file on disk is larger because
+      // it also bundles model_name + per-channel norm stats for self-decoding  - 
+      // a hackathon-grade format, not a production codec. The bpp number is the
+      // honest fundamental rate; the file size is what you'd actually ship today.
+      const realRatio = r.raw_fp16_bytes / r.size_bytes;
+      document.getElementById("comp-out-tail").innerHTML =
+        `${fmtBytes(r.raw_fp16_bytes)} raw fp16 → ${fmtBytes(r.size_bytes)} on disk ` +
+        `(${realRatio.toFixed(1)}× actual). entropy floor: ${(r.bpp*15750/8).toFixed(0)} B (${r.ratio.toFixed(0)}× ideal). ` +
+        `latent ${r.latent_shape.join("×")} · ${r.latent_unique_values} unique symbols. ` +
+        `the .nz wrapper bundles model id + norm stats for self-decoding.`;
+      // Server returned both input + reconstruction figs - show recon in
+      // result block; refresh input preview too in case it wasn't shown yet.
+      if (r.recon_fig) {
+        const rf = document.getElementById("comp-recon-fig");
+        rf.src = r.recon_fig;
+        rf.dataset.cap = `codec reconstruction · ${model} · MSE ${r.mse.toFixed(4)}`;
+        bindLightbox();
+      }
+      if (r.input_fig) {
+        const inp = document.getElementById("comp-input-fig");
+        inp.src = r.input_fig;
+        inp.dataset.cap = "input EEG (before compression)";
+        document.getElementById("comp-input-preview").style.display = "block";
+        document.getElementById("comp-input-preview-meta").textContent = r.source || " - ";
+        bindLightbox();
+      }
+      document.getElementById("comp-status").textContent = "✓ compressed";
+      // pre-load decompress with the result so the user can roundtrip
+      decUploadedB64 = r.bytes_b64;
+      setDecFileLabel(r.filename, fmtBytes(r.size_bytes) + " · from compress");
+    } catch (e) {
+      document.getElementById("comp-status").innerHTML = `<span style="color:#b23b34">error: ${e.message}</span>`;
+    } finally {
+      document.getElementById("comp-btn").disabled = false;
+    }
+  });
+  document.getElementById("comp-dl").addEventListener("click", () => {
+    if (!lastCompResult) return;
+    const bytes = Uint8Array.from(atob(lastCompResult.bytes_b64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: "application/octet-stream"}));
+    const a = document.createElement("a"); a.href = url; a.download = lastCompResult.filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  // ---------- decompress workspace ----------
+  let decUploadedB64 = null;
+  let lastDecResult = null;
+  function setDecFileLabel(name, meta) {
+    document.getElementById("dec-file-name").textContent = name;
+    document.getElementById("dec-file-meta").textContent = meta;
+    document.getElementById("dec-btn").disabled = !decUploadedB64;
+    document.getElementById("dec-btn").style.opacity = decUploadedB64 ? "1" : ".5";
+    document.getElementById("dec-status").textContent = decUploadedB64 ? "ready" : "awaiting file";
+  }
+  document.getElementById("dec-file-input").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    decUploadedB64 = await blobToB64(f);
+    setDecFileLabel(f.name, fmtBytes(f.size) + " · uploaded");
+  });
+  // Pre-compressed example .nz from the server (already passed through
+  // the default codec). Loads exactly like an uploaded .nz so decompress
+  // works without first running compress.
+  document.getElementById("dec-demo").addEventListener("change", async (e) => {
+    const v = e.target.value;
+    const dl = document.getElementById("dec-dl-example");
+    const model = examplesData.default_model || "neurozip_v4_high";
+    if (!v) {
+      dl.href = "#"; dl.style.pointerEvents = "none"; dl.style.opacity = ".5";
+      return;
+    }
+    const idx = +v;
+    const concept = cap(concepts[idx].replace(/_/g," "));
+    dl.href = `/api/demo_compressed/${idx}?model=${encodeURIComponent(model)}`;
+    dl.style.pointerEvents = "auto"; dl.style.opacity = "1"; dl.style.color = "#3b4252";
+    setDecFileLabel(`fetching ${concept} (epoch #${idx})…`, "loading compressed bytes from server");
+    try {
+      const blob = await fetch(`/api/demo_compressed/${idx}?model=${encodeURIComponent(model)}`).then(r => r.blob());
+      decUploadedB64 = await blobToB64(blob);
+      setDecFileLabel(`${concept}_idx${idx}.${model}.nz`, fmtBytes(blob.size) + " · loaded from /api/demo_compressed");
+      document.getElementById("dec-file-input").value = "";
+    } catch (err) {
+      setDecFileLabel("load failed", err.message || String(err));
+    }
+  });
+  const dd = document.getElementById("dec-drop");
+  dd.addEventListener("dragover", e => e.preventDefault());
+  dd.addEventListener("drop", async e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return;
+    decUploadedB64 = await blobToB64(f);
+    setDecFileLabel(f.name, fmtBytes(f.size) + " · dropped");
+  });
+  document.getElementById("dec-btn").addEventListener("click", async () => {
+    if (!decUploadedB64) return;
+    document.getElementById("dec-status").innerHTML = `<span class="pulse-dot">●</span> decoding…`;
+    document.getElementById("dec-btn").disabled = true;
+    try {
+      const r = await fetch("/api/decompress", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({bytes_b64: decUploadedB64})}).then(r => r.json());
+      if (r.error) throw new Error(r.error);
+      lastDecResult = r;
+      document.getElementById("dec-result").style.display = "block";
+      document.getElementById("dec-out-name").textContent = r.filename;
+      document.getElementById("dec-out-bytes").textContent = fmtBytes(r.size_bytes);
+      document.getElementById("dec-out-shape").textContent = r.shape.join(" × ");
+      document.getElementById("dec-out-tail").textContent = `decoded by ${r.model} · z-norm reversed with stored channel stats`;
+      if (r.fig) {
+        const f = document.getElementById("dec-out-fig");
+        f.src = r.fig; f.dataset.cap = `decompressed EEG · ${r.model}`;
+        bindLightbox();
+      }
+      document.getElementById("dec-status").textContent = "✓ reconstructed";
+    } catch (e) {
+      document.getElementById("dec-status").innerHTML = `<span style="color:#b23b34">error: ${e.message}</span>`;
+    } finally {
+      document.getElementById("dec-btn").disabled = false;
+    }
+  });
+  document.getElementById("dec-dl").addEventListener("click", () => {
+    if (!lastDecResult) return;
+    const bytes = Uint8Array.from(atob(lastDecResult.bytes_b64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: "application/octet-stream"}));
+    const a = document.createElement("a"); a.href = url; a.download = lastDecResult.filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  // ---------- query + tier listeners ----------
+  document.getElementById("query-text").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const t = document.getElementById("query-text").value.trim();
+      if (t) { lastQuery = { text: t }; runRetrieve(); }
+    }
+  });
+  document.getElementById("concept-sel").addEventListener("change", e => {
+    lastQuery = { concept_idx: +e.target.value };
+    document.getElementById("query-text").value = "";
+    runRetrieve();
+  });
+  document.getElementById("random-btn").addEventListener("click", () => {
+    const i = Math.floor(Math.random() * concepts.length);
+    document.getElementById("concept-sel").value = i;
+    lastQuery = { concept_idx: i };
+    document.getElementById("query-text").value = "";
+    runRetrieve();
+  });
+  document.getElementById("tier-input").addEventListener("input", e => {
+    tier = +e.target.value;
+    document.getElementById("model-tag").textContent = variantTierToModel(document.getElementById("comp-variant").value, +document.getElementById("comp-tier").value);
+    setKpis();
+    runRetrieve();
+  });
+
+  // ---------- initial render ----------
+  document.getElementById("tier-input").min = 0;
+  document.getElementById("tier-input").max = tiers - 1;
+  document.getElementById("tier-input").value = tier;
+  if (featured.length) {
+    document.getElementById("concept-sel").value = featured[0];
+    lastQuery = { concept_idx: featured[0] };
+  } else {
+    lastQuery = { concept_idx: 0 };
+  }
+  setKpis();
+  renderCodecTable();
+  await runRetrieve();
+})().catch(e => {
+  document.body.insertAdjacentHTML("beforeend",
+    `<div style="position:fixed;bottom:0;left:0;right:0;background:#fde2e2;color:#7a1f1f;padding:14px 24px;font-family:'IBM Plex Mono',monospace;font-size:13px;border-top:1px solid #f3c3c3;z-index:1000;">
+     error: ${e.message || e}. Is <code>./serve_clean_v2.sh</code> running?</div>`);
+  console.error(e);
+});
+</script>
+</body>
+</html>

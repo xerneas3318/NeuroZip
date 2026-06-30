@@ -6,4 +6,8 @@ open_clip_torch
 huggingface_hub
 matplotlib
 flask>=3.0
-tqdm
+
+
+# For notebook.ipynb (alternative to the Flask demo)
+jupyter
+nbformat

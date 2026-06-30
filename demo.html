@@ -93,6 +93,8 @@ footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid 
 .aggregate-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
 .aggregate-grid > div{background:var(--panel);border:1px solid #232737;border-radius:10px;padding:10px}
 .aggregate-grid img{width:100%;border-radius:6px}
+.tip{position:relative;cursor:help;border-bottom:1px dotted var(--muted)}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--panel2);color:var(--txt);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:6px;width:240px;text-align:left;z-index:100;line-height:1.45;pointer-events:none;border:1px solid #2a3045;box-shadow:0 6px 24px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -224,17 +226,25 @@ footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid 
   const allModels = modelsRes;            // {name: {bpp, mse, img_top1, ...}}
   const concepts = conceptsRes.concepts;
 
-  // Prefer v2 (ViT) models if present; otherwise fall back to the conv-only v1.
-  const hasV2 = Object.keys(allModels).some(n => n.includes("_v2_"));
-  const inFamily = (n, side) => hasV2
-      ? (n.startsWith(side) && n.includes("_v2_"))
-      : (n.startsWith(side) && !n.includes("_v2_"));
+  // Prefer the latest generation available on disk: v4 > v3 > v2 > v1.
+  function pickGen(allModels) {
+    for (const gen of ["v4", "v3", "v2"]) {
+      const fid = Object.keys(allModels).some(n => n.startsWith("fidelity") && n.includes(`_${gen}_`));
+      const nzn = Object.keys(allModels).some(n => n.startsWith("neurozip") && n.includes(`_${gen}_`));
+      if (fid && nzn) return gen;
+    }
+    return "v1";  // conv-only legacy
+  }
+  const GEN = pickGen(allModels);
+  const inFamily = (n, side) => GEN === "v1"
+      ? (n.startsWith(side) && !/_v[234]_/.test(n))
+      : (n.startsWith(side) && n.includes(`_${GEN}_`));
   const fidModels = Object.entries(allModels).filter(([n])=>inFamily(n,"fidelity"))
                           .sort((a,b)=>a[1].bpp - b[1].bpp);
   const nznModels = Object.entries(allModels).filter(([n])=>inFamily(n,"neurozip"))
                           .sort((a,b)=>a[1].bpp - b[1].bpp);
   const tiers = Math.min(fidModels.length, nznModels.length);
-  console.log(`using ${hasV2 ? "v2 (ViT)" : "v1 (conv-only)"} codecs: ${tiers} tiers`);
+  console.log(`using ${GEN} codecs: ${tiers} tiers`);
 
   // ---------- featured list (from precomputed assets) ----------
   let featured = [];
@@ -420,10 +430,11 @@ footer{color:var(--muted);padding:18px 32px;font-size:12px;border-top:1px solid 
     if (e.key === "Enter") document.getElementById("go").click();
   });
   document.getElementById("randomize").addEventListener("click", () => {
-    if (featured.length) {
-      const i = featured[Math.floor(Math.random()*featured.length)];
-      sel.value = i; lastQuery = {concept_idx:i}; runRetrieve();
-    }
+    // Pick any of the 200 test concepts uniformly at random.
+    const i = Math.floor(Math.random() * concepts.length);
+    sel.value = i; lastQuery = {concept_idx: i};
+    document.getElementById("text-query").value = "";
+    runRetrieve();
   });
   sel.addEventListener("change", () => {
     lastQuery = {concept_idx: +sel.value};

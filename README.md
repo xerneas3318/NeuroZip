@@ -7,8 +7,11 @@
 [![CLIP](https://img.shields.io/badge/CLIP-ViT--B%2F32%20LAION--2B-5A4FCF?style=flat-square)](https://github.com/mlfoundations/open_clip)
 [![Dataset: THINGS-EEG](https://img.shields.io/badge/Dataset-THINGS--EEG-003366?style=flat-square)](https://huggingface.co/datasets/Haitao999/things-eeg)
 [![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20Noncommercial-yellow.svg?style=flat-square)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+[![QBI Hackathon 2026](https://img.shields.io/badge/QBI%20Hackathon%202026-3rd%20place-b23b34?style=flat-square)](https://qbi.ucsf.edu/hackathon)
 
 <img src="demo/assets/rate_retrieval.png" width="620" alt="Top-5 retrieval versus bits per sample for the fidelity-only and task-aware codecs" />
+
+**🏆 3rd place at the QBI Hackathon 2026 (UCSF):** a $1,000 prize plus an invitation to apply for a $10,000 grant.
 
 </div>
 

@@ -33,3 +33,9 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# modality data caches (regenerable) + scratch
+data_eeg/
+data_ecg/
+data_fmri/
+nz_fmri/

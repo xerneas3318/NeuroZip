@@ -30,8 +30,8 @@ import exp_common as C
 from codec import quantize
 
 TAU = 0.07
-LAM_RATE = 0.02
-LAM_TASK = 3.0
+LAM_RATE = 0.06        # aggressive rate so fidelity retrieval sits below ceiling
+LAM_TASK = 2.0
 LAM_RECON = 1.0
 
 
@@ -108,9 +108,16 @@ def main():
     C.seed_all(0)
     dev = C.device()
     C.banner(f"A6  contrastive vs cosine task loss  (device={dev})")
-    data = C.make_dataset(n_concepts=40, trials_per_concept=40, noise=0.8, seed=0)
+    data = C.make_dataset(n_concepts=120, trials_per_concept=25, noise=1.3, seed=0)
 
     proj = train_projector(data, dev)
+
+    # no-compression ceiling: judge on raw (uncompressed) test EEG
+    with torch.no_grad():
+        raw_emb = []
+        for (x,) in C.iterate(data["eeg_test"], batch=128, shuffle=False, dev=dev):
+            raw_emb.append(proj(x).cpu())
+        ceiling = C.retrieval_topk(torch.cat(raw_emb, 0), data["prototypes"], data["lab_test"])
     # shared init so the only difference is the task term
     init_state = {k: v.clone() for k, v in TaskCodec().state_dict().items()}
 
@@ -125,6 +132,7 @@ def main():
     con = train_task_codec("contrastive", data, dev, proj, init_state)
 
     results = {
+        "no_compression_ceiling": ceiling,
         "fidelity_only": eval_codec(fid, data, dev, proj),
         "task_cosine": eval_codec(cos, data, dev, proj),
         "task_contrastive": eval_codec(con, data, dev, proj),

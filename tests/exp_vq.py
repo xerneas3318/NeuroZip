@@ -141,7 +141,7 @@ def main():
     data = C.make_dataset(n_concepts=40, trials_per_concept=40, noise=0.8, seed=0)
 
     scalar_pts, vq_pts = [], []
-    for lam in (0.005, 0.02, 0.08):
+    for lam in (0.02, 0.08, 0.3, 1.0, 3.0):
         m = train_scalar(data, dev, lam)
         mse, bpp = eval_scalar(m, data, dev)
         scalar_pts.append({"lambda_rate": lam, "bpp": round(bpp, 4),

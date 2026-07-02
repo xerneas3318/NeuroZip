@@ -78,8 +78,8 @@ class _BitIn:
         return b
 
 
-def _encode(symbols, cum, freq, total):
-    """symbols: list[int index]; cum/freq/total: per-symbol (cum_low, freq)."""
+def _encode(cum, freq, total):
+    """cum/freq/total: per-symbol (cumulative-low, frequency, table-total)."""
     out = _BitOut()
     low, high, pending = 0, _MASK, 0
 

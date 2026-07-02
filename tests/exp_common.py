@@ -84,18 +84,42 @@ def _concept_bank(n_concepts: int, n_sources: int, seed: int):
 
 
 def make_dataset(n_concepts: int = 40, trials_per_concept: int = 40,
-                 noise: float = 0.8, n_sources: int = 8, seed: int = 0):
+                 noise: float = 0.8, n_sources: int = 8, seed: int = 0,
+                 task_scale: float = 1.0, distractor_scale: float = 0.0,
+                 distractor_sources: int = 12):
     """Build a synthetic EEG dataset with per-channel z-normalization.
 
     Returns a dict with train/test tensors (CPU), concept prototypes, and the
     per-sample target prototype. Shapes: eeg (N,63,250), labels (N,), targets
     (N,512).
+
+    When ``distractor_scale > 0`` each trial also gets a high-variance,
+    concept-INDEPENDENT background (its own spatial mixing + random temporal
+    coefficients). With ``task_scale`` small relative to ``distractor_scale``
+    the discriminative signal is a *low-variance* part of the signal, so an
+    MSE-only codec at low rate spends its budget on the background and drops
+    the concept signature -- the regime where task-aware training matters.
     """
     templates, prototypes = _concept_bank(n_concepts, n_sources, seed)
     rng = np.random.default_rng(seed + 1)
     N = n_concepts * trials_per_concept
     labels = np.repeat(np.arange(n_concepts), trials_per_concept)
-    eeg = templates[labels] + noise * rng.normal(0, 1, size=(N, N_CH, N_T)).astype(np.float32)
+    eeg = task_scale * templates[labels]
+    if distractor_scale > 0:
+        t = np.arange(N_T)
+        lat = [20, 40, 70, 110, 150, 190, 220]
+        wid = [10, 12, 15, 18, 20, 16, 24]
+        Bd = np.stack([np.exp(-0.5 * ((t - l) / w) ** 2) for l, w in zip(lat, wid)])
+        Bd = np.concatenate([Bd, np.stack([np.sin(2 * np.pi * f * t / 250.0)
+                                           for f in (4.0, 8.0, 12.0)])], axis=0)
+        Ad = rng.normal(0, 1, size=(N_CH, distractor_sources)).astype(np.float32)
+        coeff = rng.normal(0, 1, size=(N, distractor_sources, Bd.shape[0])).astype(np.float32)
+        src_t = np.einsum("nsk,kt->nst", coeff, Bd.astype(np.float32))
+        bg = np.einsum("cs,nst->nct", Ad, src_t)                     # (N,63,250)
+        bg /= (bg.std(axis=(1, 2), keepdims=True) + 1e-6)            # unit RMS/trial
+        eeg = eeg + distractor_scale * bg
+    eeg = eeg + noise * rng.normal(0, 1, size=(N, N_CH, N_T)).astype(np.float32)
+    eeg = eeg.astype(np.float32)
 
     # Per-channel z-normalization (mean/std over the whole set), like data.py.
     mean = eeg.mean(axis=(0, 2), keepdims=True)

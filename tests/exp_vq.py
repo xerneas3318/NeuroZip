@@ -166,12 +166,18 @@ def main():
                 return ys[i] + f * (ys[i + 1] - ys[i])
         return ys[-1]
 
+    scalar_min_bpp = min(p["bpp"] for p in scalar_pts)
     matched = [{"K": p["K"], "bpp": p["bpp"], "vq_mse": p["mse"],
                 "scalar_mse_at_same_bpp": round(interp_scalar_mse(p["bpp"]), 4),
-                "vq_mse_delta_pct": round(100 * (p["mse"] / interp_scalar_mse(p["bpp"]) - 1), 2)}
+                "vq_mse_delta_pct": round(100 * (p["mse"] / interp_scalar_mse(p["bpp"]) - 1), 2),
+                "extrapolated_below_scalar_floor": bool(p["bpp"] < scalar_min_bpp)}
                for p in vq_pts]
 
-    results = {"scalar_rd": scalar_pts, "vq_rd": vq_pts, "matched_rate": matched}
+    results = {"scalar_rd": scalar_pts, "vq_rd": vq_pts, "matched_rate": matched,
+               "scalar_min_bpp": round(scalar_min_bpp, 4),
+               "note": ("VQ codes 32 temporal tokens vs scalar's 512 symbols, so VQ "
+                        "reaches lower bitrates than scalar+factorized can; points below "
+                        "scalar_min_bpp are extrapolated (scalar cannot reach them here)")}
     print("RESULTS_JSON:" + json.dumps(results))
     print(json.dumps(results, indent=2))
     return results

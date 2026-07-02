@@ -108,7 +108,11 @@ def main():
     C.seed_all(0)
     dev = C.device()
     C.banner(f"A6  contrastive vs cosine task loss  (device={dev})")
-    data = C.make_dataset(n_concepts=120, trials_per_concept=25, noise=1.3, seed=0)
+    # task-fragile regime: weak concept signal buried under a high-variance,
+    # concept-independent distractor, so MSE-only compression sacrifices the
+    # discriminative signal (the regime where task-aware training matters).
+    data = C.make_dataset(n_concepts=100, trials_per_concept=30, noise=0.3,
+                          task_scale=0.5, distractor_scale=2.5, seed=0)
 
     proj = train_projector(data, dev)
 

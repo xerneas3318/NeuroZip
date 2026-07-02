@@ -281,22 +281,68 @@ def _auc(scores, labels):
     return float((ranks[labels == 1].sum() - P * (P + 1) / 2) / (P * N))
 
 
+def _interp(xs, ys, x):
+    pts = sorted(zip(xs, ys))
+    xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+    if x <= xs[0]:
+        return ys[0]
+    if x >= xs[-1]:
+        return ys[-1]
+    for i in range(len(xs) - 1):
+        if xs[i] <= x <= xs[i + 1]:
+            f = (x - xs[i]) / (xs[i + 1] - xs[i] + 1e-9)
+            return ys[i] + f * (ys[i + 1] - ys[i])
+    return ys[-1]
+
+
 def main():
     C.seed_all(0)
     dev = C.device()
-    C.banner(f"B  task-aware FACE codec vs fidelity  (device={dev})")
+    C.banner(f"B  task-aware FACE codec vs fidelity (matched bitrate)  (device={dev})")
     data = load_faces()
     judge = train_judge(data["x_train"], data["y_train"], dev, data["n_id"], seed=0)
     judge2 = train_judge(data["x_train"], data["y_train"], dev, data["n_id"], seed=7)  # held-out
 
-    fid = train_codec("fidelity", data, dev, judge)
-    tsk = train_codec("task", data, dev, judge)
+    # Sweep lambda_rate per mode so the rate-vs-accuracy curves overlap; the task
+    # loss inflates rate, so it needs higher lambda to reach the same bpp.
+    sweeps = {"fidelity": (0.03, 0.1, 0.3, 0.8), "task": (0.1, 0.3, 0.8, 2.0)}
+    curves = {}
+    for mode, lams in sweeps.items():
+        pts = []
+        for lam in lams:
+            m = train_codec(mode, data, dev, judge, lam_rate=lam)
+            ev = evaluate(m, data, dev, judge, judge2)
+            pts.append({"lambda_rate": lam, "bpp": ev["bpp"], "ratio": ev["ratio_vs_uint8_rgb"],
+                        "mse": ev["mse"], "id_top1": ev["judge_same"]["id_top1"],
+                        "id_top5": ev["judge_same"]["id_top5"],
+                        "auc": ev["judge_same"]["verif_auc"],
+                        "id_top1_indep": ev["judge_independent"]["id_top1"]})
+        curves[mode] = pts
+
+    # Matched-bpp read: at each fidelity bpp within the task curve's range,
+    # interpolate the task-aware id_top1.
+    fb = [p["bpp"] for p in curves["fidelity"]]
+    tb = [p["bpp"] for p in curves["task"]]
+    t_top1 = [p["id_top1"] for p in curves["task"]]
+    t_top1i = [p["id_top1_indep"] for p in curves["task"]]
+    matched = []
+    for p in curves["fidelity"]:
+        if min(tb) <= p["bpp"] <= max(tb):
+            matched.append({
+                "bpp": p["bpp"], "ratio": p["ratio"],
+                "fidelity_id_top1": p["id_top1"],
+                "task_id_top1_at_same_bpp": round(_interp(tb, t_top1, p["bpp"]), 4),
+                "delta_pp": round(100 * (_interp(tb, t_top1, p["bpp"]) - p["id_top1"]), 2),
+                "fidelity_id_top1_indep": p["id_top1_indep"],
+                "task_id_top1_indep_at_same_bpp": round(_interp(tb, t_top1i, p["bpp"]), 4),
+            })
 
     results = {
         "dataset": data["source"], "n_identities": data["n_id"],
         "chance_top1": round(1 / data["n_id"], 4),
-        "fidelity": evaluate(fid, data, dev, judge, judge2),
-        "task_aware": evaluate(tsk, data, dev, judge, judge2),
+        "fidelity_curve": curves["fidelity"],
+        "task_aware_curve": curves["task"],
+        "matched_bitrate": matched,
     }
     print("RESULTS_JSON:" + json.dumps(results))
     print(json.dumps(results, indent=2))

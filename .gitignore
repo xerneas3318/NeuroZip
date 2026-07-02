@@ -36,3 +36,7 @@ Thumbs.db
 
 # ECG data (regenerable; see ECG.md)
 data_ecg/
+
+# scratch + other-modality data (regenerable)
+nz_fmri/
+data_fmri/

@@ -11,3 +11,7 @@ flask>=3.0
 # For notebook.ipynb (alternative to the Flask demo)
 jupyter
 nbformat
+
+# For the ecg-fable branch (12-lead ECG codec + diagnosis-preservation)
+wfdb
+scikit-learn

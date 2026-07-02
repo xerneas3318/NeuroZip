@@ -139,11 +139,30 @@ of the fidelity–function trade:
 Pick by what the compressed data is for. Both are small; the SVD codec needs no
 trained weights at all.
 
-## Run
+## Test it (one command)
+
+The trained checkpoints are committed, so after fetching the data you can verify
+every codec end-to-end (metrics table + a real compress→file→decompress round-trip):
 
 ```bash
 pip install -r requirements.txt          # + nibabel nilearn scipy scikit-learn constriction
-python fable_data.py                      # fetch Haxby, build cache
+python fable_data.py                      # one-time: fetch Haxby (~300 MB) + build cache
+python fable_test.py                      # runs nd1 / nd3 / svd-8 / svd-16, prints the table
+```
+
+Expected output (held-out session):
+
+```
+codec            params     MSE     VE    PSNR   ratio   B/vol  decode kept
+nd1 neural        0.59M   0.241    82%   40.2dB     26x    5755        100%
+nd3 neural        2.40M   0.384    72%   38.2dB    294x     516         29%
+svd K=8      0 (no net)   0.089    93%   44.6dB     75x    2014         35%
+svd K=16     0 (no net)   0.059    96%   46.3dB     41x    3697         33%
+```
+
+## Run (individual tools)
+
+```bash
 python fable_train.py --n-down 3 --K 512 --epochs 150 --out checkpoints/fable_nd3.pt
 python fable_finalize.py --ckpt checkpoints/fable_nd3.pt   # bundle temporal prior
 python fable_eval.py   --ckpt checkpoints/fable_nd3.pt     # rate / fidelity / decoding

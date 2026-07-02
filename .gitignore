@@ -11,6 +11,11 @@ venv/
 # Data (~3 GB; users re-download via scripts/download_data.sh)
 data/
 
+# fMRI-fable: Haxby download + cache (~1 GB; regenerate via `python fable_data.py`)
+data_fmri/
+# fMRI-fable scratch dir (logs, temp artifacts)
+nz_fmri/
+
 # Trained model checkpoints (~190 MB; users regenerate via ./train.sh)
 # All .pt weights and per-codec training logs.
 checkpoints/*.pt

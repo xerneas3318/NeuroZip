@@ -11,3 +11,10 @@ flask>=3.0
 # For notebook.ipynb (alternative to the Flask demo)
 jupyter
 nbformat
+
+# For the fmri-fable branch (4D volume codec): fetch/read NIfTI + entropy coding
+nibabel
+nilearn
+scipy
+scikit-learn
+constriction

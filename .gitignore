@@ -33,3 +33,10 @@ Thumbs.db
 # Local-only
 /tmp/
 *.tmp
+
+# scratch/data (regenerable)
+nz_fmri/
+data_fmri/
+data_eeg/
+data_ecg/
+data_har/

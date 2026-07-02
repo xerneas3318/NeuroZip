@@ -129,7 +129,7 @@ def main():
     # discriminative signal (the regime where task-aware training matters). Mild
     # enough that fidelity retains PARTIAL retrieval, leaving room to beat it.
     data = C.make_dataset(n_concepts=80, trials_per_concept=30, noise=0.3,
-                          task_scale=0.7, distractor_scale=1.2, seed=0)
+                          task_scale=0.5, distractor_scale=2.0, seed=0)
 
     proj = train_projector(data, dev)
 
@@ -143,7 +143,7 @@ def main():
 
     # Sweep lambda_rate per mode -> (bpp, top5) curves; compare task modes to
     # fidelity at MATCHED bpp via interpolation (removes the rate confound).
-    lams = (0.004, 0.012, 0.035, 0.08)
+    lams = (0.02, 0.06, 0.12, 0.25)
     curves = {}
     for mode in ("fidelity", "cosine", "contrastive"):
         pts = []

@@ -141,6 +141,44 @@ confirmed on a held-out judge (so it isn't just fitting the training judge).
 
 ---
 
+## Stacked codec vs current NeuroZip (origin/main)
+`exp_stacked.py` (`tests/results/STACKED_vs_main.json`). One codec stacking the
+compatible wins — **A1** real range coding + **A2+A3** mixture mean-scale
+hyperprior + **A5** variable-rate gains (one model) + **A6** cosine task — vs a
+faithful origin/main baseline (imported byte-identical `codec.EEGCodec`,
+factorized prior, `savez` serialization, cosine task, **one model per tier**).
+Both trained identically, same frozen judge. **A4 (VQ) excluded** —
+architecturally exclusive with the scalar+hyperprior path.
+
+At matched distortion **and** matched retrieval (both top-5 = 1.0, MSE ≈ 0.83):
+
+| | current NeuroZip (origin/main) | **stacked** |
+|---|---|---|
+| models needed for the rate range | **4** (one per tier) | **1** |
+| modeled bpp @ MSE 0.83 | 0.097 | **0.058** (−40 %) |
+| **real on-disk ratio vs fp16** | **120×** (`savez`, shipped) | **263×** (range-coded) |
+| range coder round-trip | — | ✅ lossless |
+| **on-disk gain vs shipped** | 1.0× | **2.2×** |
+
+Where the 2.2× comes from (multiplicative):
+- **A1 serialization** alone: `savez` 120× → range-coding the *same* baseline
+  latents 166× = **1.38×** (free; DEFLATE was ignoring the prior).
+- **A2+A3 entropy model + rate**: 166× → 263× = **1.59×** (mixture hyperprior
+  cuts modeled bpp ~40 % end-to-end — larger than the 8–11 % each showed in
+  isolation because it's trained jointly with the gains).
+- **A5**: the whole rate range from **one** checkpoint instead of four.
+
+Caveats specific to this bench:
+- Retrieval saturates (top-5 = 1.0) for both in this regime, so the comparison
+  is **rate at equal quality**, not a retrieval win (that's A6/B). 
+- MSE plateaus for both (the task loss pins reconstruction), so only one
+  matched-distortion point overlaps; the full rate curves (stacked dominates at
+  every level) back it up.
+- Pushing λ_rate very high collapses the hyperprior path (posterior collapse) —
+  the gain levels partly degenerate (~3 distinct rate points, not 4). Real
+  training-stability work (e.g. warm-start, rate annealing) is needed before the
+  stack is production-ready.
+
 ## Honest limitations
 - Synthetic EEG surrogate (not THINGS-EEG); mechanisms are real, absolute
   numbers are not comparable to the paper. A1's coder is prior-exact regardless.

@@ -92,18 +92,52 @@ Reading the curve (`plots/fable_rd.png`):
   decompressed brains at 56.9% vs 58.3% baseline) — at 26× and, notably, the
   **smallest** model (0.59M). The rate–function plot is monotonic: 29 → 42 → 100%.
 
-So the branch delivers two working operating points from one small architecture:
-a ~300× archival codec and a ~26× codec that preserves the neuroscience. This is
-the NeuroZip thesis re-derived from the compression side — MSE keeps the
-high-variance signal and drops the low-variance task signal, so you either spend
-the bits (here) or add a task term (the `fmri-semantic` route) to keep
-decodability at the extreme ratios.
+So the per-volume codec gives two operating points from one small architecture: a
+~300× archival codec and a ~26× codec that preserves the neuroscience (`nd1` keeps
+100% of decoding). This is the NeuroZip thesis re-derived from the compression
+side — MSE keeps the high-variance signal and drops the low-variance task signal.
 
-This is the NeuroZip thesis re-derived on fMRI from the compression side:
-MSE-optimal compression keeps the high-variance signal and drops the
-low-variance task signal. The clean next step (as in the `fmri-semantic` branch)
-is a task-aware term to keep decodability at the high compression ratios — but as
-a *pure* volume codec, the fidelity story already works.
+## Getting MSE well under 0.1 — compress the TIME axis (`fable_svd.py`)
+
+The per-volume codec's reconstruction MSE floors around **0.24** no matter how
+it's tuned, and diagnostics say why: it compresses the wrong axis. A *single* fMRI
+volume is high-rank in space (per-volume PCA floors at MSE ~0.14 even at rank
+1000), so compressing each volume independently is intrinsically hard. But an fMRI
+*run* is dramatically low-rank in **time** — it's a block design and BOLD is slow,
+so a rank-16 temporal SVD of the 121-TR run reconstructs to **MSE 0.056**. The
+per-volume codec throws that away (it only used time to entropy-code tokens).
+
+`fable_svd.py` compresses along the redundant axis. Per temporal segment it takes
+an SVD of the (T×voxels) matrix, keeps the top-K components, and stores K
+**full-resolution** spatial maps (int8) + tiny per-frame temporal coefficients
+(float16), gzipped. Full spatial resolution is retained (that's what drives MSE
+down); only time is truncated. It's classic transform (KLT) coding, no training —
+the basis is computed per segment at compress time. Real end-to-end bytes:
+
+| rank K | MSE | VE | PSNR | ratio vs .nii.gz | VT decode retained |
+|-------:|----:|---:|-----:|-----------------:|-------------------:|
+| 8  | **0.089** | 93.5% | 44.6 dB | **75×** | 35% |
+| 12 | 0.071 | 94.8% | 45.6 dB | 52× | 35% |
+| 16 | 0.059 | 95.7% | 46.3 dB | 41× | 33% |
+
+Rank-8 already clears the target: **MSE 0.089 at 75×** — lower MSE *and* higher
+ratio than any per-volume setting, because it finally exploits the temporal
+redundancy. (A neural spatiotemporal conv codec was also tried; it stays
+spatial-grid-limited — a downsampled latent can't hold full spatial detail — which
+is exactly why the transform codec, keeping full-resolution maps, wins here.)
+
+The catch is the mirror image of `nd3`: truncating to the top-K *variance*
+directions keeps the dominant signal (low MSE) but drops the low-variance VT
+decoding pattern (35% retained). So the two codec families sit at opposite corners
+of the fidelity–function trade:
+
+- **`fable_svd.py`** — lowest MSE (0.06–0.09), highest ratio (40–75×), fine
+  decoding lost. Best for **archival / fidelity**.
+- **`fable_codec.py` `nd1`** — higher MSE (0.24) but 100% decoding retained. Best
+  when the **downstream analysis** must survive compression.
+
+Pick by what the compressed data is for. Both are small; the SVD codec needs no
+trained weights at all.
 
 ## Run
 
@@ -115,7 +149,11 @@ python fable_finalize.py --ckpt checkpoints/fable_nd3.pt   # bundle temporal pri
 python fable_eval.py   --ckpt checkpoints/fable_nd3.pt     # rate / fidelity / decoding
 python fable_report.py checkpoints/fable_nd1.pt checkpoints/fable_nd2.pt checkpoints/fable_nd3.pt
 
-# real files
+# low-MSE temporal-SVD codec (no training needed)
+python fable_svd.py --rank 8              # MSE 0.089 @ 75x
+python fable_svd.py --rank 16             # MSE 0.059 @ 41x
+
+# real files (per-volume neural codec)
 python fable_cli.py compress   data_fmri/haxby2001/subj1/bold.nii.gz -o out.nzf --ckpt checkpoints/fable_nd3.pt
 python fable_cli.py decompress out.nzf -o recon.nii.gz --ckpt checkpoints/fable_nd3.pt
 ```

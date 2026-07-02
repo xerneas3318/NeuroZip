@@ -64,7 +64,8 @@ class TaskCodec(nn.Module):
         return self.dec(yq), self.prior.bits(yq)
 
 
-def train_task_codec(mode, data, dev, proj, init_state, epochs=18, batch=64):
+def train_task_codec(mode, data, dev, proj, init_state, lam_rate, lam_task,
+                     epochs=18, batch=64):
     m = TaskCodec().to(dev)
     m.load_state_dict(init_state)
     m.train()
@@ -74,15 +75,30 @@ def train_task_codec(mode, data, dev, proj, init_state, epochs=18, batch=64):
         for x, y, tgt in C.iterate(data["eeg_train"], data["lab_train"],
                                    data["tgt_train"], batch=batch, shuffle=True, dev=dev):
             xh, bps = m(x)
-            emb = proj(xh)                          # grad flows through frozen P
-            if mode == "cosine":
-                task = (1 - F.cosine_similarity(emb, F.normalize(tgt, dim=-1), dim=-1)).mean()
-            else:  # contrastive
-                logits = emb @ proto.t() / TAU
-                task = F.cross_entropy(logits, y)
-            loss = LAM_RECON * F.mse_loss(xh, x) + LAM_RATE * bps + LAM_TASK * task
+            loss = LAM_RECON * F.mse_loss(xh, x) + lam_rate * bps
+            if mode != "fidelity":
+                emb = proj(xh)                      # grad flows through frozen P
+                if mode == "cosine":
+                    task = (1 - F.cosine_similarity(emb, F.normalize(tgt, dim=-1), dim=-1)).mean()
+                else:  # contrastive
+                    task = F.cross_entropy(emb @ proto.t() / TAU, y)
+                loss = loss + lam_task * task
             opt.zero_grad(); loss.backward(); opt.step()
     return m
+
+
+def _interp(xs, ys, x):
+    pts = sorted(zip(xs, ys))
+    xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+    if x <= xs[0]:
+        return ys[0]
+    if x >= xs[-1]:
+        return ys[-1]
+    for i in range(len(xs) - 1):
+        if xs[i] <= x <= xs[i + 1]:
+            f = (x - xs[i]) / (xs[i + 1] - xs[i] + 1e-9)
+            return ys[i] + f * (ys[i + 1] - ys[i])
+    return ys[-1]
 
 
 @torch.no_grad()
@@ -110,9 +126,10 @@ def main():
     C.banner(f"A6  contrastive vs cosine task loss  (device={dev})")
     # task-fragile regime: weak concept signal buried under a high-variance,
     # concept-independent distractor, so MSE-only compression sacrifices the
-    # discriminative signal (the regime where task-aware training matters).
-    data = C.make_dataset(n_concepts=100, trials_per_concept=30, noise=0.3,
-                          task_scale=0.5, distractor_scale=2.5, seed=0)
+    # discriminative signal (the regime where task-aware training matters). Mild
+    # enough that fidelity retains PARTIAL retrieval, leaving room to beat it.
+    data = C.make_dataset(n_concepts=80, trials_per_concept=30, noise=0.3,
+                          task_scale=0.7, distractor_scale=1.2, seed=0)
 
     proj = train_projector(data, dev)
 
@@ -122,25 +139,43 @@ def main():
         for (x,) in C.iterate(data["eeg_test"], batch=128, shuffle=False, dev=dev):
             raw_emb.append(proj(x).cpu())
         ceiling = C.retrieval_topk(torch.cat(raw_emb, 0), data["prototypes"], data["lab_test"])
-    # shared init so the only difference is the task term
     init_state = {k: v.clone() for k, v in TaskCodec().state_dict().items()}
 
-    # fidelity-only reference (lam_task=0) via cosine path with LAM_TASK temporarily 0
-    global LAM_TASK
-    saved = LAM_TASK
-    LAM_TASK = 0.0
-    fid = train_task_codec("cosine", data, dev, proj, init_state)
-    LAM_TASK = saved
+    # Sweep lambda_rate per mode -> (bpp, top5) curves; compare task modes to
+    # fidelity at MATCHED bpp via interpolation (removes the rate confound).
+    lams = (0.004, 0.012, 0.035, 0.08)
+    curves = {}
+    for mode in ("fidelity", "cosine", "contrastive"):
+        pts = []
+        for lam in lams:
+            m = train_task_codec(mode, data, dev, proj, init_state,
+                                 lam_rate=lam, lam_task=LAM_TASK)
+            pts.append(eval_codec(m, data, dev, proj))
+        curves[mode] = pts
 
-    cos = train_task_codec("cosine", data, dev, proj, init_state)
-    con = train_task_codec("contrastive", data, dev, proj, init_state)
+    def matched(mode):
+        tb = [p["bpp"] for p in curves[mode]]
+        t5 = [p["top5"] for p in curves[mode]]
+        t1 = [p["top1"] for p in curves[mode]]
+        out = []
+        for p in curves["fidelity"]:
+            if min(tb) <= p["bpp"] <= max(tb):
+                out.append({"bpp": p["bpp"], "ratio": p["ratio"],
+                            "fidelity_top5": p["top5"],
+                            f"{mode}_top5": round(_interp(tb, t5, p["bpp"]), 4),
+                            "top5_delta_pp": round(100 * (_interp(tb, t5, p["bpp"]) - p["top5"]), 2),
+                            "fidelity_top1": p["top1"],
+                            f"{mode}_top1": round(_interp(tb, t1, p["bpp"]), 4)})
+        return out
 
     results = {
         "no_compression_ceiling": ceiling,
-        "fidelity_only": eval_codec(fid, data, dev, proj),
-        "task_cosine": eval_codec(cos, data, dev, proj),
-        "task_contrastive": eval_codec(con, data, dev, proj),
         "chance_top1": round(1 / data["n_concepts"], 4),
+        "fidelity_curve": curves["fidelity"],
+        "cosine_curve": curves["cosine"],
+        "contrastive_curve": curves["contrastive"],
+        "cosine_vs_fidelity_matched_bpp": matched("cosine"),
+        "contrastive_vs_fidelity_matched_bpp": matched("contrastive"),
     }
     print("RESULTS_JSON:" + json.dumps(results))
     print(json.dumps(results, indent=2))

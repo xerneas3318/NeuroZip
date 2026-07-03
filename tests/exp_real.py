@@ -47,8 +47,11 @@ from exp_variable_rate import (train_variable, eval_variable, train_fixed,
 from exp_stacked import (StackedCodec, BaselineCodec, train_baseline,
                          train_stacked, code_and_measure)
 
-TRAIN_CAP = 16000
+TRAIN_CAP = 16000              # codec-training subsample (kept light)
+PROJ_CAP = None                # judge trains on the FULL train set (like train.py)
+PROJ_EPOCHS = 8
 N_DISK = 64                    # test epochs used for the real on-disk measurement
+BATCH = 128                    # small — GPU is shared/starved
 TAU = 0.07
 
 
@@ -57,7 +60,7 @@ TAU = 0.07
 # --------------------------------------------------------------------------- #
 
 def load_real():
-    tr = td.ThingsEEG(split="train", max_epochs=TRAIN_CAP)
+    tr = td.ThingsEEG(split="train", max_epochs=PROJ_CAP)
     te = td.ThingsEEG(split="test")
     te_avg, te_text, te_img = te.trial_averaged()      # (200,63,250)
     img_gallery = te.concept_clip_img().float()        # (200,512)
@@ -85,14 +88,21 @@ def load_real():
 # Judge (attention projector) + retrieval
 # --------------------------------------------------------------------------- #
 
-def train_projector(data, dev, epochs=14, batch=256):
+def train_projector(data, dev, epochs=PROJ_EPOCHS, batch=BATCH):
+    """Mirror train.py: full train set, AdamW + cosine schedule, InfoNCE."""
     proj = EEGProjector(hidden=HIDDEN, n_attn=2).to(dev).train()
-    opt = torch.optim.Adam(proj.parameters(), lr=1e-3)
+    opt = torch.optim.AdamW(proj.parameters(), lr=3e-4, weight_decay=1e-4)
+    n = data["eeg_train"].shape[0]
+    steps = epochs * math.ceil(n / batch)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=steps)
     for ep in range(epochs):
         for x, tgt in C.iterate(data["eeg_train"], data["tgt_train"], batch=batch,
                                 shuffle=True, dev=dev):
-            loss = info_nce(proj(x), tgt)
-            opt.zero_grad(); loss.backward(); opt.step()
+            loss = info_nce(proj(x), tgt, temperature=TAU)
+            opt.zero_grad(); loss.backward(); opt.step(); sched.step()
+        acc = retr_both(project(proj, data["eeg_test"], dev), data)
+        print(f"[proj] epoch {ep+1}/{epochs} img_top1={acc['image']['top1']:.3f} "
+              f"img_top5={acc['image']['top5']:.3f}", flush=True)
     proj.eval()
     for p in proj.parameters():
         p.requires_grad_(False)
@@ -247,6 +257,16 @@ def main():
     results["projector_ceiling_no_compression"] = ceil
     results["chance_top1"] = round(1 / data["n_concepts"], 4)
     print(f"[ceiling] {ceil}", flush=True)
+
+    # Judge is trained on the FULL set; codec stages use a light random subsample.
+    full_n = data["eeg_train"].shape[0]
+    if full_n > TRAIN_CAP:
+        perm = torch.randperm(full_n)[:TRAIN_CAP]
+        data["eeg_train"] = data["eeg_train"][perm].contiguous()
+        data["tgt_train"] = data["tgt_train"][perm].contiguous()
+        data["lab_train"] = data["lab_train"][perm].contiguous()
+        import gc; gc.collect()
+    results["data"]["codec_train_epochs"] = int(data["eeg_train"].shape[0])
 
     # ---------- stacked vs origin/main (PRIMARY) ----------
     def run_stacked_vs_main():

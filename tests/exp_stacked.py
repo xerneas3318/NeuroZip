@@ -103,8 +103,10 @@ class _FactorizedScale(nn.Module):
 
 
 class StackedCodec(nn.Module):
-    def __init__(self, n_levels, c_lat=16, hidden=32, hyper_ch=12, K=3):
+    def __init__(self, n_levels, c_lat=None, hidden=None, hyper_ch=12, K=3):
         super().__init__()
+        c_lat = C.TINY["c_lat"] if c_lat is None else c_lat
+        hidden = C.TINY["hidden"] if hidden is None else hidden
         base = EEGCodec(c_lat=c_lat, hidden=hidden, n_attn=0)       # origin/main arch
         self.enc, self.dec = base.encoder, base.decoder
         self.K, self.c_lat = K, c_lat
@@ -179,8 +181,10 @@ def _cos_task(proj, xh, tgt):
 # ---- baseline: faithful origin/main codec (factorized prior, per-tier) ----
 
 class BaselineCodec(nn.Module):
-    def __init__(self, c_lat=16, hidden=32):
+    def __init__(self, c_lat=None, hidden=None):
         super().__init__()
+        c_lat = C.TINY["c_lat"] if c_lat is None else c_lat
+        hidden = C.TINY["hidden"] if hidden is None else hidden
         self.m = EEGCodec(c_lat=c_lat, hidden=hidden, n_attn=0)
 
     def forward(self, x):

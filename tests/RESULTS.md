@@ -179,6 +179,57 @@ Caveats specific to this bench:
   training-stability work (e.g. warm-start, rate annealing) is needed before the
   stack is production-ready.
 
+## REAL THINGS-EEG benchmark (sub-01) — the numbers that count
+`exp_real.py` (`tests/results/REAL_all.json`). Actual dataset
+(Haitao999/things-eeg): judge = attention projector trained on the **full
+66,160** train epochs (AdamW+cosine, like `train.py`); codecs trained on a 16k
+single-trial subsample; **evaluation trial-averaged over the 80 test reps**,
+200-way retrieval vs the CLIP image + text galleries. Config = origin/main v4
+(codec c_lat=32/hidden=128).
+
+**Judge ceiling (no compression):** image top-1/5/10 = **11 / 36 / 52 %**;
+text = **3 / 14.5 / 23.5 %** (chance top-1 = 0.5 %). Between the paper's conv
+and attention judges — realistic, not saturated.
+
+**A1 — real on-disk (isolated, on real latents):** modeled 0.4182 bits/sym →
+range-coded 0.4155 (**+0.024 % overhead**, lossless round-trip). On disk:
+**592× range-coded vs 317× shipped `savez` = 1.87×**. In the stacked stage the
+same holds per tier: savez→range-coded is **1.6–2.0×** (λ=0.4: 325×→**643×**).
+**This is the one improvement that transfers to real data.**
+
+**A2 hyperprior +0.37 %, A3 mixture −3.2 %** on real latents — i.e. **no gain**
+(vs +8.3 % / +10.7 % on the synthetic surrogate). Real codec latents are
+extremely sparse (0.42 bits/sym, mostly zeros); the factorized Laplace is
+already near-optimal, leaving nothing for a hyperprior/mixture to exploit.
+
+**A4 VQ:** scalar+factorized dominates. Scalar reaches bpp 0.0053 (3010×) at
+MSE 0.049; VQ (K=64–1024) sits at bpp ~0.011 (1340–1530×) with *worse* MSE
+0.055–0.067. (Scalar λ=1.0 posterior-collapses to bpp≈0 — degenerate, ignore.)
+
+**A5 variable-rate:** the standalone gained model gives **3 distinct rates from
+one model** (321–514×, did *not* collapse), but its RD trails the dedicated
+per-rate models here. Inside the full stack the gains *did* collapse (all levels
+MSE 0.0343) — a hyperprior×gain training-stability issue, not the gain mechanism.
+
+**A6 task loss (retrieval, matched-ish):** cosine task-aware beats fidelity on
+retrieval **at lower rate** — image top-5 **0.21 vs 0.18**, text top-5 **0.115
+vs 0.075**, at bpp 0.083 vs 0.105. Contrastive spent ~2× the bits (0.197 bpp)
+for no retrieval gain. Reproduces synthetic: cosine helps, contrastive doesn't
+beat it.
+
+**Stacked vs origin/main (real):** the stacked model matched, but did **not
+beat**, baseline+A1 at matched distortion (stacked ~600× range-coded vs baseline
+489–643× range-coded at MSE≈0.034; both ≫ shipped savez 257–325×). Because on
+real data the stack's only live advantage over "baseline + A1 range-coding" was
+the hyperprior (≈0 gain) and gains (collapsed). **Net real-data takeaway: ship
+the A1 range coder (~1.9× on disk, zero model change, lossless); the
+hyperprior/mixture/VQ wins were synthetic-surrogate artifacts and do not
+transfer to these sparse real latents.**
+
+Caveats: 16k-epoch / few-epoch codec training (not the paper's full budget);
+one operating region (very low bitrate). At a higher-bitrate regime with richer
+latents the priors might recover some gain — untested here.
+
 ## Honest limitations
 - Synthetic EEG surrogate (not THINGS-EEG); mechanisms are real, absolute
   numbers are not comparable to the paper. A1's coder is prior-exact regardless.

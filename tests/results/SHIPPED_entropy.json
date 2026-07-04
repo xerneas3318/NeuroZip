@@ -1,0 +1,98 @@
+{
+ "neurozip_v4_low": {
+  "modeled_bpp_factorized": 0.1111,
+  "ratio_savez_shipped": 101.9,
+  "ratio_A1_rangecoded": 144.3,
+  "A1_over_savez_x": 1.416,
+  "bits_per_symbol_factorized": 1.7082,
+  "bits_per_symbol_hyperprior": 1.7127,
+  "bits_per_symbol_mixture": 1.7467,
+  "hyperprior_rate_reduction_pct": -0.27,
+  "mixture_rate_reduction_pct": -2.25,
+  "rc_roundtrip": true
+ },
+ "neurozip_v4_med": {
+  "modeled_bpp_factorized": 0.19,
+  "ratio_savez_shipped": 63.9,
+  "ratio_A1_rangecoded": 84.2,
+  "A1_over_savez_x": 1.318,
+  "bits_per_symbol_factorized": 2.9218,
+  "bits_per_symbol_hyperprior": 2.8949,
+  "bits_per_symbol_mixture": 2.778,
+  "hyperprior_rate_reduction_pct": 0.92,
+  "mixture_rate_reduction_pct": 4.92,
+  "rc_roundtrip": true
+ },
+ "neurozip_v4_high": {
+  "modeled_bpp_factorized": 0.2216,
+  "ratio_savez_shipped": 57.6,
+  "ratio_A1_rangecoded": 72.3,
+  "A1_over_savez_x": 1.255,
+  "bits_per_symbol_factorized": 3.409,
+  "bits_per_symbol_hyperprior": 3.3117,
+  "bits_per_symbol_mixture": 3.1586,
+  "hyperprior_rate_reduction_pct": 2.85,
+  "mixture_rate_reduction_pct": 7.34,
+  "rc_roundtrip": true
+ },
+ "neurozip_v4_xhigh": {
+  "modeled_bpp_factorized": 0.2501,
+  "ratio_savez_shipped": 55.6,
+  "ratio_A1_rangecoded": 64.0,
+  "A1_over_savez_x": 1.15,
+  "bits_per_symbol_factorized": 3.8463,
+  "bits_per_symbol_hyperprior": 3.6085,
+  "bits_per_symbol_mixture": 3.2654,
+  "hyperprior_rate_reduction_pct": 6.18,
+  "mixture_rate_reduction_pct": 15.1,
+  "rc_roundtrip": true
+ },
+ "fidelity_v4_low": {
+  "modeled_bpp_factorized": 0.0762,
+  "ratio_savez_shipped": 164.5,
+  "ratio_A1_rangecoded": 210.9,
+  "A1_over_savez_x": 1.282,
+  "bits_per_symbol_factorized": 1.1725,
+  "bits_per_symbol_hyperprior": 1.1534,
+  "bits_per_symbol_mixture": 1.2069,
+  "hyperprior_rate_reduction_pct": 1.63,
+  "mixture_rate_reduction_pct": -2.93,
+  "rc_roundtrip": true
+ },
+ "fidelity_v4_med": {
+  "modeled_bpp_factorized": 0.1544,
+  "ratio_savez_shipped": 81.8,
+  "ratio_A1_rangecoded": 103.6,
+  "A1_over_savez_x": 1.267,
+  "bits_per_symbol_factorized": 2.3752,
+  "bits_per_symbol_hyperprior": 2.3877,
+  "bits_per_symbol_mixture": 2.2561,
+  "hyperprior_rate_reduction_pct": -0.53,
+  "mixture_rate_reduction_pct": 5.02,
+  "rc_roundtrip": true
+ },
+ "fidelity_v4_high": {
+  "modeled_bpp_factorized": 0.2092,
+  "ratio_savez_shipped": 66.6,
+  "ratio_A1_rangecoded": 76.5,
+  "A1_over_savez_x": 1.149,
+  "bits_per_symbol_factorized": 3.2174,
+  "bits_per_symbol_hyperprior": 3.0694,
+  "bits_per_symbol_mixture": 2.7966,
+  "hyperprior_rate_reduction_pct": 4.6,
+  "mixture_rate_reduction_pct": 13.08,
+  "rc_roundtrip": true
+ },
+ "fidelity_v4_xhigh": {
+  "modeled_bpp_factorized": 0.2481,
+  "ratio_savez_shipped": 63.5,
+  "ratio_A1_rangecoded": 64.5,
+  "A1_over_savez_x": 1.015,
+  "bits_per_symbol_factorized": 3.8158,
+  "bits_per_symbol_hyperprior": 3.431,
+  "bits_per_symbol_mixture": 2.9406,
+  "hyperprior_rate_reduction_pct": 10.08,
+  "mixture_rate_reduction_pct": 22.94,
+  "rc_roundtrip": true
+ }
+}

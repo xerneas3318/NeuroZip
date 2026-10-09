@@ -11,7 +11,7 @@
 
 <img src="demo/assets/rate_retrieval.png" width="620" alt="Top-5 retrieval versus bits per sample for the fidelity-only and task-aware codecs" />
 
-**🏆 3rd place at the QBI Hackathon 2026 (UCSF):** a $1,000 prize plus an invitation to apply for a $10,000 grant.
+**🏆 3rd place at the QBI Hackathon 2026 (UCSF):** a $1,000 prize plus an addition $8,600+ of grant funding.
 
 </div>
 

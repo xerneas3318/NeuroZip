@@ -99,6 +99,7 @@ def main():
            "**avg4** = disjoint 4-rep averages (4,000 queries); **single** = every single trial (16,000 queries).",
            "bpp is the modeled rate (bits per EEG sample) on avg80; fp16 = 16 bpp.", ""]
     for name, key, title in (("SUBJECTS.json", "subjects", "Within-subject (each subject trains its own judge + codecs)"),
+                             ("SUBJECTS_seed1.json", "subjects", "Within-subject replicate, seed 1"),
                              ("LOSO.json", "folds", "Leave-one-subject-out (train on 9, test on held-out)")):
         p = R / name
         if p.exists():

@@ -52,3 +52,32 @@ This is the part of the grant we most want to maximize. We have published a few 
 | 2–4 | Matched-bitrate benchmarking and controls, entropy-model and multi-judge extensions. |
 | 4–6 | NSD and THINGS-MEG transfer, large-scale scaling runs, partner-lab integration, figures, pre-print at month 6. |
 | 7–9 | Venue submission, iEEG stretch goal, open codec and demo release. |
+
+---
+
+## Progress log
+
+### 2026-10-15 — Workstream 1 kickoff (all 10 subjects, single-trial, LOSO)
+
+Full tables: [tests/results/SUBJECTS.md](tests/results/SUBJECTS.md). Harnesses: `tests/exp_subjects.py`, `tests/exp_loso.py`, `tests/exp_shipped_single.py`; summary: `tests/summarize_subjects.py`.
+
+**Setup.** All 10 THINGS-EEG subjects downloaded. Fixed a loader bug: normalization stats were cached in one shared file, so every subject would have been z-scored with sub-01's stats; now cached per subject (sub-01 keeps the legacy path the shipped checkpoints use). Added `single_trial()` and `k_averaged(k)` test views next to `trial_averaged()`.
+
+**Protocol.** Per subject: train that subject's frozen judge (12 epochs, fixed in advance for all subjects), then per rate tier train a fidelity codec and branch it into fidelity-continued vs. NeuroZip (task loss), same architecture, init and step count. Score on avg80 (paper protocol), avg4, and single trials (16,000 queries). Matched-bitrate comparisons interpolate each subject's fidelity rate curve at NeuroZip's actual bpp. Stats are paired across subjects (t-test and Wilcoxon).
+
+**Results.**
+- *Within-subject, 10 subjects:* single-trial image top-5 at matched bitrate, NeuroZip 18.4% vs. fidelity 11.3% (+6.8 to +7.0 pts across tiers, **10/10 subjects**, p ≈ 4e-6). On the 80-rep averages the gain is +4.4 to +5.3 pts (8–9/10 subjects). The advantage is *larger* without averaging, so it is not an artifact of the 80-repetition protocol.
+- *Shipped v4 checkpoints, sub-01, single trials:* NeuroZip 14.6–15.0% vs. fidelity 8.2–9.9% image top-5 (judge). The independent held-out classifier agrees when scored on the 20 test reps it never trained on: single-trial top-1 9.2–9.9% vs. 4.6–6.2% (raw 8.5%, chance 0.5%); 20-rep averages 82–88% vs. 47–72%. NeuroZip's lowest-rate tier (0.11 bpp) beats fidelity's highest (0.25 bpp).
+- *Found and fixed a leak in the classifier control:* the shipped held-out classifier trains on 60 of the 80 test reps per concept, so scoring it on all 80 reps (as a naive single-trial eval would) puts 75% of the scored trials in its training set. `exp_shipped_single.py` scores it only on the 20 unseen reps. `evaluate.py` scores the classifier on the 80-rep average, so it has the same leak for the headline holdout number; worth re-checking.
+- *Leave-one-subject-out:* a judge trained on 9 subjects reaches only 12.9% avg80 / 7.9% single-trial top-5 on the held-out subject (vs. 39% / 20% within-subject). NeuroZip still wins on single trials for 10/10 held-out subjects, but by only +0.8 pts; no difference on averaged views. Cross-subject transfer is limited by the judge, not the codec.
+
+**Caveats.**
+- The retrieval scores use the same judge the codec was trained against (circularity). The leak-free held-out-classifier control so far exists only for sub-01 (shipped checkpoints); per-subject classifiers are a workstream 2 item.
+- Judges are short-trained (12 epochs, avg80 top-5 39% ± 11%). The epoch count was chosen from sub-01's test curve, then frozen for all subjects.
+- Rates come from the modeled factorized prior (≈0.12–0.25 bpp, ~65–130×), not a range-coded bitstream.
+
+**Next.**
+1. Per-subject held-out classifiers so every subject gets the non-circular check (WS2).
+2. Cross-subject judge: subject embeddings or per-subject adapter layers, since LOSO is judge-bound.
+3. More seeds, plus the 10,000-permutation spatial test per subject (WS2).
+4. Mentor and lab outreach (months 1–2, non-code).

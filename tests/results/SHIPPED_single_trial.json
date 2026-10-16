@@ -8,8 +8,7 @@
    "text": {
     "top1": 0.075,
     "top5": 0.24
-   },
-   "holdout_top1": 1.0
+   }
   },
   "avg4": {
    "image": {
@@ -19,8 +18,7 @@
    "text": {
     "top1": 0.0393,
     "top5": 0.1293
-   },
-   "holdout_top1": 0.8293
+   }
   },
   "single": {
    "image": {
@@ -30,10 +28,16 @@
    "text": {
     "top1": 0.0234,
     "top5": 0.0894
-   },
-   "holdout_top1": 0.2541
+   }
+  },
+  "single_heldout_reps": {
+   "holdout_top1": 0.085
+  },
+  "avg20_heldout_reps": {
+   "holdout_top1": 0.96
   }
  },
+ "holdout_note": "classifier scored on the 20 reps it never trained on",
  "low": {
   "fidelity": {
    "avg80": {
@@ -47,8 +51,7 @@
       "top1": 0.025,
       "top5": 0.095
      }
-    },
-    "holdout_top1": 0.88
+    }
    },
    "bpp": 0.0762,
    "ratio_vs_fp16": 209.9,
@@ -63,8 +66,7 @@
       "top1": 0.0213,
       "top5": 0.077
      }
-    },
-    "holdout_top1": 0.3325
+    }
    },
    "single": {
     "mse": 0.61054,
@@ -77,8 +79,13 @@
       "top1": 0.0122,
       "top5": 0.0524
      }
-    },
-    "holdout_top1": 0.079
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.046
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.465
    }
   },
   "neurozip": {
@@ -93,8 +100,7 @@
       "top1": 0.06,
       "top5": 0.175
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.1111,
    "ratio_vs_fp16": 144.1,
@@ -109,8 +115,7 @@
       "top1": 0.0347,
       "top5": 0.1373
      }
-    },
-    "holdout_top1": 0.6225
+    }
    },
    "single": {
     "mse": 0.61363,
@@ -123,8 +128,13 @@
       "top1": 0.0243,
       "top5": 0.0887
      }
-    },
-    "holdout_top1": 0.1593
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.0922
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.84
    }
   }
  },
@@ -141,8 +151,7 @@
       "top1": 0.035,
       "top5": 0.125
      }
-    },
-    "holdout_top1": 0.995
+    }
    },
    "bpp": 0.1544,
    "ratio_vs_fp16": 103.6,
@@ -157,8 +166,7 @@
       "top1": 0.0225,
       "top5": 0.0943
      }
-    },
-    "holdout_top1": 0.4695
+    }
    },
    "single": {
     "mse": 0.57311,
@@ -171,8 +179,13 @@
       "top1": 0.014,
       "top5": 0.0611
      }
-    },
-    "holdout_top1": 0.1032
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.06
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.635
    }
   },
   "neurozip": {
@@ -187,8 +200,7 @@
       "top1": 0.07,
       "top5": 0.225
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.19,
    "ratio_vs_fp16": 84.2,
@@ -203,8 +215,7 @@
       "top1": 0.0373,
       "top5": 0.1417
      }
-    },
-    "holdout_top1": 0.6597
+    }
    },
    "single": {
     "mse": 0.58153,
@@ -217,8 +228,13 @@
       "top1": 0.0234,
       "top5": 0.0893
      }
-    },
-    "holdout_top1": 0.1606
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.094
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.85
    }
   }
  },
@@ -235,8 +251,7 @@
       "top1": 0.03,
       "top5": 0.125
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.2092,
    "ratio_vs_fp16": 76.5,
@@ -251,8 +266,7 @@
       "top1": 0.022,
       "top5": 0.0885
      }
-    },
-    "holdout_top1": 0.4968
+    }
    },
    "single": {
     "mse": 0.57213,
@@ -265,8 +279,13 @@
       "top1": 0.0125,
       "top5": 0.0589
      }
-    },
-    "holdout_top1": 0.1073
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.0597
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.715
    }
   },
   "neurozip": {
@@ -281,8 +300,7 @@
       "top1": 0.08,
       "top5": 0.215
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.2216,
    "ratio_vs_fp16": 72.2,
@@ -297,8 +315,7 @@
       "top1": 0.0413,
       "top5": 0.1398
      }
-    },
-    "holdout_top1": 0.6683
+    }
    },
    "single": {
     "mse": 0.59009,
@@ -311,8 +328,13 @@
       "top1": 0.0239,
       "top5": 0.0859
      }
-    },
-    "holdout_top1": 0.1627
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.0955
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.875
    }
   }
  },
@@ -329,8 +351,7 @@
       "top1": 0.035,
       "top5": 0.145
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.2481,
    "ratio_vs_fp16": 64.5,
@@ -345,8 +366,7 @@
       "top1": 0.0227,
       "top5": 0.0835
      }
-    },
-    "holdout_top1": 0.465
+    }
    },
    "single": {
     "mse": 0.57004,
@@ -359,8 +379,13 @@
       "top1": 0.0143,
       "top5": 0.0601
      }
-    },
-    "holdout_top1": 0.1017
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.0622
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.685
    }
   },
   "neurozip": {
@@ -375,8 +400,7 @@
       "top1": 0.055,
       "top5": 0.22
      }
-    },
-    "holdout_top1": 1.0
+    }
    },
    "bpp": 0.2501,
    "ratio_vs_fp16": 64.0,
@@ -391,8 +415,7 @@
       "top1": 0.0358,
       "top5": 0.1343
      }
-    },
-    "holdout_top1": 0.6617
+    }
    },
    "single": {
     "mse": 0.57862,
@@ -405,8 +428,13 @@
       "top1": 0.0245,
       "top5": 0.0878
      }
-    },
-    "holdout_top1": 0.1666
+    }
+   },
+   "single_heldout_reps": {
+    "holdout_top1": 0.0988
+   },
+   "avg20_heldout_reps": {
+    "holdout_top1": 0.825
    }
   }
  }

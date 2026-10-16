@@ -76,6 +76,23 @@ def section(title, runs, gallery="image", k="top5"):
             lines.append(f"| {t} | {v} | {np.mean(bz):.3f} | {ms(fi)} | {ms(zz)} | {ms(dlt)} | "
                          f"{int((dlt > 0).sum())}/{len(subs)} | {pt} | {pw} |")
     lines.append("")
+    if gallery == "image" and "single_heldout_reps" in runs[subs[0]]["ceiling_raw"]:
+        lines += ["**Held-out classifier (non-circular)** — per-subject concept classifier trained on raw EEG "
+                  "from 60 test reps, scored on the 20 reps it never saw. Top-1 (%), chance 0.5%.", "",
+                  "| tier | view | raw | fidelity | NeuroZip | Δ | NZ wins | p (t) | p (Wilcoxon) |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for t in tiers:
+            for v in ("single_heldout_reps", "avg20_heldout_reps"):
+                raw = [runs[s]["ceiling_raw"][v]["holdout_top1"] for s in subs]
+                f = np.array([runs[s]["tiers"][t]["fidelity"][v]["holdout_top1"] for s in subs])
+                z = np.array([runs[s]["tiers"][t]["neurozip"][v]["holdout_top1"] for s in subs])
+                dlt = z - f
+                ok = len(subs) > 1 and np.any(dlt != 0)
+                pt = f"{stats.ttest_rel(z, f).pvalue:.2g}" if ok else "–"
+                pw = f"{stats.wilcoxon(z, f).pvalue:.2g}" if ok else "–"
+                lines.append(f"| {t} | {v.split('_')[0]} | {ms(raw)} | {ms(f)} | {ms(z)} | {ms(dlt)} | "
+                             f"{int((dlt > 0).sum())}/{len(subs)} | {pt} | {pw} |")
+        lines.append("")
     # per-subject single-trial detail
     lines += [f"**Per-subject {gallery} {k} (%), single-trial view**", "",
               "| subject | raw | " + " | ".join(f"{t} fid | {t} NZ" for t in tiers) + " |",
@@ -100,6 +117,7 @@ def main():
            "bpp is the modeled rate (bits per EEG sample) on avg80; fp16 = 16 bpp.", ""]
     for name, key, title in (("SUBJECTS.json", "subjects", "Within-subject (each subject trains its own judge + codecs)"),
                              ("SUBJECTS_seed1.json", "subjects", "Within-subject replicate, seed 1"),
+                             ("SUBJECTS_seed2_holdout.json", "subjects", "Within-subject replicate, seed 2 (+ held-out classifier)"),
                              ("LOSO.json", "folds", "Leave-one-subject-out (train on 9, test on held-out)")):
         p = R / name
         if p.exists():

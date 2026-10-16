@@ -61,8 +61,14 @@ def _normalize_text_key(s: str) -> str:
 
 
 def compute_or_load_norm_stats(subject: str = "sub-01") -> tuple[torch.Tensor, torch.Tensor]:
-    """Per-channel mean/std over the train split. Save once, reuse."""
-    cache = DATA_ROOT / "norm_stats.pt"
+    """Per-channel mean/std over the train split. Save once, reuse.
+
+    Stats are per subject: sub-01 keeps the legacy `norm_stats.pt` path (the
+    shipped checkpoints were trained against it); every other subject caches to
+    `norm_stats_<subject>.pt` so subjects never share normalization.
+    """
+    name = "norm_stats.pt" if subject == "sub-01" else f"norm_stats_{subject}.pt"
+    cache = DATA_ROOT / name
     if cache.exists():
         s = torch.load(cache, weights_only=False, map_location="cpu")
         return s["mean"], s["std"]
@@ -147,6 +153,24 @@ class ThingsEEG(Dataset):
         text = self.texts.reshape(self.n_concepts, self.n_reps)[:, 0].tolist()
         img = self.img_paths.reshape(self.n_concepts, self.n_reps)[:, 0].tolist()
         return torch.from_numpy(eeg), text, img
+
+    def single_trial(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """All R repetitions un-averaged -> (N*R, 63, 250) plus each epoch's
+        concept index (0..N-1, matching trial_averaged() row order)."""
+        idx = torch.arange(self.n_concepts).repeat_interleave(self.n_reps)
+        return torch.from_numpy(self.eeg), idx
+
+    def k_averaged(self, k: int, seed: int = 0) -> tuple[torch.Tensor, torch.Tensor]:
+        """Average disjoint random groups of k repetitions per concept ->
+        (N*(R//k), 63, 250) plus concept index. k=1 is single-trial,
+        k=R is trial_averaged()."""
+        R = self.n_reps
+        g = R // k
+        eeg = self.eeg.reshape(self.n_concepts, R, N_CHANNELS, N_TIMES)
+        perm = np.random.default_rng(seed).permutation(R)[: g * k]
+        eeg = eeg[:, perm].reshape(self.n_concepts, g, k, N_CHANNELS, N_TIMES).mean(axis=2)
+        idx = torch.arange(self.n_concepts).repeat_interleave(g)
+        return torch.from_numpy(eeg.reshape(-1, N_CHANNELS, N_TIMES)), idx
 
     def concept_clip_img(self) -> torch.Tensor:
         """One CLIP image feature per concept (using the representative image)."""

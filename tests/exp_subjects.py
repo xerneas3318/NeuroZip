@@ -158,6 +158,55 @@ def embed(proj, x, codec=None, batch=512):
 
 
 # --------------------------------------------------------------------------- #
+# Held-out classifier (non-circular control, --holdout)
+# --------------------------------------------------------------------------- #
+
+def holdout_split(d, R=80):
+    """Same split as train.py `classifier`: train on 60 test reps, score on 20."""
+    x1, _ = d["views"]["single"]
+    perm = np.random.default_rng(0).permutation(R)
+    x = x1.reshape(-1, R, N_CH, N_T)
+    tr, va = x[:, perm[:60]], x[:, perm[60:]]
+    n = x.shape[0]
+    return tr, {"single_heldout_reps": (va.reshape(-1, N_CH, N_T), torch.arange(n).repeat_interleave(20)),
+                "avg20_heldout_reps": (va.mean(1), torch.arange(n))}
+
+
+def train_holdout(tr, steps=4000, batch=256, K=5, log=print):
+    """Concept classifier on raw EEG only (never sees a codec). Each sample is
+    the average of K random training reps of a random concept (train.py recipe)."""
+    from train import HoldoutClassifier
+    n, r = tr.shape[:2]
+    trg = tr.half().to(DEV)
+    clf = HoldoutClassifier(n_classes=n, hidden=HIDDEN, n_attn=2).to(DEV).train()
+    opt = torch.optim.AdamW(clf.parameters(), lr=3e-4, weight_decay=1e-4)
+    for _ in range(steps):
+        c = torch.randint(0, n, (batch,), device=DEV)
+        reps = torch.rand(batch, r, device=DEV).argsort(1)[:, :K]
+        xb = trg[c[:, None], reps].float().mean(1)
+        loss = F.cross_entropy(clf(xb), c)
+        opt.zero_grad(); loss.backward()
+        torch.nn.utils.clip_grad_norm_(clf.parameters(), 1.0)
+        opt.step()
+    clf.eval()
+    for p in clf.parameters():
+        p.requires_grad_(False)
+    del trg
+    return clf
+
+
+@torch.no_grad()
+def holdout_acc(clf, x, row, codec=None, batch=512):
+    hit = 0
+    for i in range(0, x.shape[0], batch):
+        xb = x[i:i + batch].to(DEV)
+        if codec is not None:
+            xb = codec.decoder(torch.round(codec.encoder(xb)))
+        hit += (clf(xb).argmax(-1).cpu() == row[i:i + batch]).sum().item()
+    return round(hit / x.shape[0], 4)
+
+
+# --------------------------------------------------------------------------- #
 # Codecs
 # --------------------------------------------------------------------------- #
 
@@ -179,8 +228,11 @@ def train_codec(codec, d, proj, lam_rate, lam_task, epochs, idx, batch=256, lr=2
     return codec
 
 
-def score_codec(codec, proj, d):
+def score_codec(codec, proj, d, clf=None):
     out = {}
+    if clf is not None:
+        for v, (x, row) in d["holdout_views"].items():
+            out[v] = {"holdout_top1": holdout_acc(clf, x, row, codec)}
     for view, (x, row) in d["views"].items():
         emb, mse, bps = embed(proj, x, codec)
         out[view] = {"mse": round(mse, 5), "retrieval": retrieval(emb, row, d)}
@@ -203,6 +255,13 @@ def run_subject(subject, args, log):
 
     proj = train_judge(d, args.judge_epochs, log=log)
     res["ceiling_raw"] = {v: retrieval(embed(proj, x), row, d) for v, (x, row) in d["views"].items()}
+    clf = None
+    if args.holdout:
+        tr, d["holdout_views"] = holdout_split(d)
+        clf = train_holdout(tr, log=log)
+        del tr
+        for v, (x, row) in d["holdout_views"].items():
+            res["ceiling_raw"][v] = {"holdout_top1": holdout_acc(clf, x, row)}
     log(f"[{subject}] ceiling {json.dumps(res['ceiling_raw'])}")
 
     n = d["x_train"].shape[0]
@@ -221,10 +280,12 @@ def run_subject(subject, args, log):
         nz.load_state_dict(state)
         nz = train_codec(nz, d, proj, lam_rate, LAMBDA_TASK, args.codec_epochs, idx)
         res["tiers"][tag] = {"lambda_rate": lam_rate,
-                             "fidelity": score_codec(fid, proj, d),
-                             "neurozip": score_codec(nz, proj, d)}
+                             "fidelity": score_codec(fid, proj, d, clf),
+                             "neurozip": score_codec(nz, proj, d, clf)}
         f, z = res["tiers"][tag]["fidelity"], res["tiers"][tag]["neurozip"]
-        log(f"[{subject}] {tag}: bpp fid={f['bpp']} nz={z['bpp']} | "
+        hl = (f" | holdout single fid={f['single_heldout_reps']['holdout_top1']:.3f} "
+              f"nz={z['single_heldout_reps']['holdout_top1']:.3f}") if clf is not None else ""
+        log(f"[{subject}] {tag}: bpp fid={f['bpp']} nz={z['bpp']}{hl} | "
             + " | ".join(f"{v} img top5 fid={f[v]['retrieval']['image']['top5']:.3f} "
                          f"nz={z[v]['retrieval']['image']['top5']:.3f}"
                          for v in d["views"]))
@@ -243,6 +304,9 @@ def main():
     a.add_argument("--seed", type=int, default=0)
     a.add_argument("--out", type=str, default=str(OUT))
     a.add_argument("--force", action="store_true")
+    a.add_argument("--holdout", action="store_true",
+                   help="also train a per-subject concept classifier on 60 test reps "
+                        "and score codecs on the 20 unseen reps (non-circular control)")
     args = a.parse_args()
 
     out = Path(args.out)
@@ -250,6 +314,7 @@ def main():
     allres = json.loads(out.read_text()) if out.exists() else {}
     allres["config"] = {"judge_epochs": args.judge_epochs, "codec_epochs": args.codec_epochs,
                         "train_cap": args.train_cap, "tiers": TIERS, "lambda_task": LAMBDA_TASK,
+                        "holdout": args.holdout,
                         "codec": f"conv-only c_lat={C_LAT} hidden={HIDDEN}",
                         "judge": f"attn n_attn=2 hidden={HIDDEN}",
                         "protocol": "fidelity trained E epochs, then branched: fidelity +E "
